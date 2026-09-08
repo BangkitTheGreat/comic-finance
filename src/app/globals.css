@@ -1,0 +1,239 @@
+@import "tailwindcss";
+
+@plugin "tailwindcss-animate";
+
+/* Custom theme variables */
+@theme {
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #b85a00;
+  --color-on-primary-container: #fefcff;
+  --color-background: #fafaf5;
+  --color-on-error-container: #93000a;
+  --color-on-background: #1a1c19;
+  --color-on-surface-variant: #414753;
+  --color-error-container: #ffdad6;
+  --color-surface: #fafaf5;
+  --color-on-primary-fixed-variant: #00458e;
+  --color-surface-tint: #005cba;
+  --color-tertiary-fixed: #ffdbc7;
+  --color-on-secondary-container: #007239;
+  --color-on-error: #ffffff;
+  --color-surface-container-high: #e8e8e4;
+  --color-border-heavy: #111827;
+  --color-surface-bright: #fafaf5;
+  --color-ink: #1F2933;
+  --color-pop-purple: #BB6BD9;
+  --color-outline-variant: #c1c6d5;
+  --color-primary-container: #1672df;
+  --color-pop-blue: #56CCF2;
+  --color-on-tertiary-fixed-variant: #733600;
+  --color-on-secondary-fixed-variant: #005228;
+  --color-on-tertiary-fixed: #311300;
+  --color-surface-container-highest: #e2e3de;
+  --color-primary: #005ab6;
+  --color-surface-container-low: #f4f4ef;
+  --color-on-tertiary-container: #fffbff;
+  --color-on-primary: #ffffff;
+  --color-on-surface: #1a1c19;
+  --color-surface-container: #eeeee9;
+  --color-inverse-surface: #2f312e;
+  --color-tertiary-fixed-dim: #ffb688;
+  --color-inverse-primary: #abc7ff;
+  --color-outline: #727785;
+  --color-danger: #EB5757;
+  --color-secondary: #006d37;
+  --color-warning: #F2C94C;
+  --color-secondary-fixed-dim: #61de8a;
+  --color-primary-fixed-dim: #abc7ff;
+  --color-inverse-on-surface: #f1f1ec;
+  --color-surface-dim: #dadad5;
+  --color-tertiary: #934700;
+  --color-primary-fixed: #d7e3ff;
+  --color-on-primary-fixed: #001b3f;
+  --color-secondary-fixed: #7efba4;
+  --color-pop-pink: #FF6B6B;
+  --color-surface-variant: #e2e3de;
+  --color-error: #ba1a1a;
+  --color-secondary-container: #7bf8a1;
+  --color-on-secondary-fixed: #00210c;
+  --color-surface-container-lowest: #ffffff;
+  --color-on-secondary: #ffffff;
+
+  --spacing-offset-shadow: 4px;
+  --spacing-margin-desktop: 32px;
+  --spacing-panel-padding: 24px;
+  --spacing-margin-mobile: 16px;
+  --spacing-unit: 8px;
+  --spacing-gutter: 16px;
+
+  --font-display-numeric: var(--font-public-sans), sans-serif;
+  --font-headline-lg: var(--font-public-sans), sans-serif;
+  --font-headline-lg-mobile: var(--font-public-sans), sans-serif;
+  --font-headline-md: var(--font-public-sans), sans-serif;
+  --font-caption: var(--font-public-sans), sans-serif;
+  --font-bubble-text: var(--font-public-sans), sans-serif;
+  --font-body-md: var(--font-public-sans), sans-serif;
+  --font-label-md: var(--font-public-sans), sans-serif;
+  --font-body-lg: var(--font-public-sans), sans-serif;
+}
+
+@layer base {
+  :root {
+    --background: var(--color-background);
+    --foreground: var(--color-on-background);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+
+  /* Material Symbols Outline adjustments */
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+  .icon-fill {
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+}
+
+@utility shadow-comic {
+  box-shadow: 4px 4px 0px 0px var(--color-border-heavy);
+}
+@utility shadow-comic-sm {
+  box-shadow: 2px 2px 0px 0px var(--color-border-heavy);
+}
+@utility shadow-comic-hover {
+  box-shadow: 6px 6px 0px 0px var(--color-border-heavy);
+}
+@utility shadow-comic-active {
+  box-shadow: 2px 2px 0px 0px var(--color-border-heavy);
+}
+@utility shadow-comic-heavy {
+  box-shadow: 8px 8px 0px 0px var(--color-border-heavy);
+}
+
+/* Reduce Motion preference (user setting + OS) */
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  transition-duration: 0.01ms !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+}
+.reduce-motion .comic-interactive:hover,
+.reduce-motion .comic-interactive:active {
+  transform: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* Interactive Elements */
+@utility comic-interactive {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+
+  &:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0px 0px var(--color-border-heavy);
+  }
+  &:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0px 0px var(--color-border-heavy);
+  }
+}
+
+/* Comic Speech Bubble Tails */
+.bubble-tail {
+  position: relative;
+}
+.bubble-tail::after {
+  content: '';
+  position: absolute;
+  bottom: -12px;
+  left: 24px;
+  border-width: 12px 12px 0;
+  border-style: solid;
+  border-color: var(--color-border-heavy) transparent transparent transparent;
+  display: block;
+  width: 0;
+  z-index: 10;
+}
+.bubble-tail::before {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 26px;
+  border-width: 10px 10px 0;
+  border-style: solid;
+  border-color: var(--color-warning) transparent transparent transparent; /* default to warning color */
+  display: block;
+  width: 0;
+  z-index: 11;
+}
+
+.bubble-tail-white::before {
+  border-color: #ffffff transparent transparent transparent;
+}
+
+/* Typography Scale Overrides */
+.text-display-numeric {
+  font-size: 48px;
+  line-height: 56px;
+  letter-spacing: -0.02em;
+  font-weight: 800;
+}
+.text-headline-lg {
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 700;
+}
+.text-headline-lg-mobile {
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 700;
+}
+.text-headline-md {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 700;
+}
+.text-caption {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+}
+.text-bubble-text {
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 600;
+}
+.text-body-md {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+}
+.text-label-md {
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0.02em;
+  font-weight: 600;
+}
+.text-label-md-mobile {
+  font-size: 10px;
+  line-height: 14px;
+  font-weight: 600;
+}
+.text-body-lg {
+  font-size: 18px;
+  line-height: 28px;
+  font-weight: 400;
+}
