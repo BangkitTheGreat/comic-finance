@@ -1,10 +1,16 @@
 import type { Transaction } from "./types";
 
 const seed: Transaction[] = [
-  { id: "t1", merchant: "Joe's Diner", category: "Food & Dining", account: "Credit Card", date: "2026-06-11", amount: -32.5 },
-  { id: "t2", merchant: "Tech Corp Inc.", category: "Salary", account: "Checking", date: "2026-06-10", amount: 4250.0 },
+  { id: "t1", merchant: "Joe's Diner", category: "Food & Dining", account: "Credit Card", date: "2026-06-11", amount: -32.5, note: "Lunch with colleagues" },
+  { id: "t2", merchant: "Tech Corp Inc.", category: "Salary", account: "Checking", date: "2026-06-10", amount: 4250.0, note: "Monthly salary direct deposit" },
   { id: "t3", merchant: "City Transit", category: "Transport", account: "Debit Card", date: "2026-06-09", amount: -2.75 },
-  { id: "t4", merchant: "MegaMart", category: "Groceries", account: "Credit Card", date: "2026-06-08", amount: -145.2 },
+  { id: "t4", merchant: "MegaMart", category: "Groceries", account: "Credit Card", date: "2026-06-08", amount: -145.2, note: "Weekly grocery restock" },
+  { id: "t5", merchant: "Netflix Subscription", category: "Entertainment", account: "Credit Card", date: "2026-06-07", amount: -15.99, note: "Monthly premium plan" },
+  { id: "t6", merchant: "Kopi Kenangan", category: "Food & Dining", account: "Debit Card", date: "2026-06-06", amount: -4.5, note: "Afternoon iced latte" },
+  { id: "t7", merchant: "Freelance UI Design", category: "Salary", account: "Checking", date: "2026-06-05", amount: 650.0, note: "Design system milestone payment" },
+  { id: "t8", merchant: "Electric Utility Co", category: "Bills", account: "Checking", date: "2026-06-04", amount: -85.4, note: "May electricity invoice" },
+  { id: "t9", merchant: "Comic Bookstore", category: "Shopping", account: "Credit Card", date: "2026-06-03", amount: -42.0, note: "Vintage superhero comic" },
+  { id: "t10", merchant: "FitZone Gym", category: "Health", account: "Debit Card", date: "2026-06-02", amount: -55.0, note: "Gym membership monthly dues" },
 ];
 
 interface Store {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ComicButton } from "@/components/ui/ComicButton";
 import { TransactionFormModal } from "./TransactionFormModal";
 import { deleteTransaction } from "@/lib/transactions/actions";
@@ -17,15 +18,34 @@ interface Props {
   transactions: Transaction[];
   accounts?: string[];
   initialAccount?: string;
+  initialQuery?: string;
+  initialTransactionId?: string;
   currency: Currency;
 }
 
-export function TransactionsClient({ transactions, accounts, initialAccount = "all", currency }: Props) {
+export function TransactionsClient({
+  transactions,
+  accounts,
+  initialAccount = "all",
+  initialQuery = "",
+  initialTransactionId = "",
+  currency,
+}: Props) {
+  const router = useRouter();
   const accountOptions = accounts && accounts.length > 0 ? accounts : ACCOUNTS;
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [account, setAccount] = useState(initialAccount);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Transaction | null>(null);
+  // Deep-link from the dashboard (?transactionId=ID): pre-select the
+  // transaction so its edit modal opens on mount. This relies on
+  // page.tsx's key={...transactionId...} remounting on navigation —
+  // same pattern as initialQuery/initialAccount above.
+  // Unknown IDs resolve to null → modal stays closed (graceful).
+  const deepLinkedTx =
+    initialTransactionId !== ""
+      ? (transactions.find((t) => t.id === initialTransactionId) ?? null)
+      : null;
+  const [modalOpen, setModalOpen] = useState(deepLinkedTx !== null);
+  const [editing, setEditing] = useState<Transaction | null>(deepLinkedTx);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -48,6 +68,20 @@ export function TransactionsClient({ transactions, accounts, initialAccount = "a
   const openEdit = (tx: Transaction) => {
     setEditing(tx);
     setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setEditing(null);
+    setModalOpen(false);
+    // Clean the deep-link param so a refresh doesn't reopen the modal.
+    // Preserve the search/account filters so Tugas 1 behavior is untouched.
+    if (initialTransactionId) {
+      const params = new URLSearchParams();
+      if (query.trim()) params.set("q", query.trim());
+      if (account !== "all") params.set("account", account);
+      const qs = params.toString();
+      router.replace(qs ? `/transactions?${qs}` : "/transactions");
+    }
   };
 
   return (
@@ -167,7 +201,7 @@ export function TransactionsClient({ transactions, accounts, initialAccount = "a
         )}
       </div>
 
-      <TransactionFormModal open={modalOpen} onClose={() => setModalOpen(false)} editing={editing} accounts={accountOptions} />
+      <TransactionFormModal open={modalOpen} onClose={closeModal} editing={editing} accounts={accountOptions} />
     </>
   );
 }

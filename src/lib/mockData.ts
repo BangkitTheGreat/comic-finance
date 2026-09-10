@@ -55,6 +55,66 @@ export const recentTransactions = [
     amount: -145.20,
     icon: "shopping_bag",
     color: "bg-pop-purple"
+  },
+  {
+    id: "t5",
+    merchant: "Netflix Subscription",
+    category: "Entertainment",
+    date: "Oct 22",
+    account: "Credit Card",
+    amount: -15.99,
+    icon: "movie",
+    color: "bg-warning"
+  },
+  {
+    id: "t6",
+    merchant: "Kopi Kenangan",
+    category: "Food & Dining",
+    date: "Oct 21",
+    account: "Debit Card",
+    amount: -4.50,
+    icon: "restaurant",
+    color: "bg-pop-pink"
+  },
+  {
+    id: "t7",
+    merchant: "Freelance UI Design",
+    category: "Salary",
+    date: "Oct 20",
+    account: "Checking",
+    amount: 650.00,
+    icon: "payments",
+    color: "bg-secondary-container"
+  },
+  {
+    id: "t8",
+    merchant: "Electric Utility Co",
+    category: "Bills",
+    date: "Oct 19",
+    account: "Checking",
+    amount: -85.40,
+    icon: "bolt",
+    color: "bg-tertiary-fixed"
+  },
+  {
+    id: "t9",
+    merchant: "Comic Bookstore",
+    category: "Shopping",
+    date: "Oct 18",
+    account: "Credit Card",
+    amount: -42.00,
+    icon: "shopping_cart",
+    color: "bg-pop-pink"
+  },
+  {
+    id: "t10",
+    merchant: "FitZone Gym",
+    category: "Health",
+    date: "Oct 17",
+    account: "Debit Card",
+    amount: -55.00,
+    icon: "favorite",
+    color: "bg-error-container"
   }
 ];
 

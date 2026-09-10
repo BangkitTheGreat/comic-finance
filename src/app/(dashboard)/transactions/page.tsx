@@ -6,11 +6,21 @@ import { TransactionsClient } from "@/components/transactions/TransactionsClient
 export default async function TransactionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ account?: string }>;
+  searchParams: Promise<{ account?: string; q?: string; transactionId?: string }>;
 }) {
-  const { account } = await searchParams;
+  const { account, q, transactionId } = await searchParams;
   const transactions = listTransactions();
   const accounts = listAccountNames();
   const currency = getActiveCurrency();
-  return <TransactionsClient transactions={transactions} accounts={accounts} initialAccount={account ?? "all"} currency={currency} />;
+  return (
+    <TransactionsClient
+      key={`${account ?? "all"}-${q ?? ""}-${transactionId ?? ""}`}
+      transactions={transactions}
+      accounts={accounts}
+      initialAccount={account ?? "all"}
+      initialQuery={q ?? ""}
+      initialTransactionId={transactionId ?? ""}
+      currency={currency}
+    />
+  );
 }

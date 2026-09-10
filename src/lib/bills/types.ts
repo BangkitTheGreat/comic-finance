@@ -43,7 +43,7 @@ export function formatDueLabel(bill: Bill, today = new Date()): string {
   const status = getBillStatus(bill, today);
   if (status === "paid") return "Paid";
   const diff = daysUntil(bill.dueDate, today);
-  if (diff === 0) return "Today";
-  if (diff < 0) return `${Math.abs(diff)} day${Math.abs(diff) === 1 ? "" : "s"} ago`;
-  return `${diff} day${diff === 1 ? "" : "s"}`;
+  if (diff === 0) return "Due Today";
+  if (diff < 0) return `Due ${Math.abs(diff)} day${Math.abs(diff) === 1 ? "" : "s"} ago`;
+  return `Due in ${diff} day${diff === 1 ? "" : "s"}`;
 }

@@ -101,7 +101,7 @@ export function BillsClient({ bills, currency }: { bills: Bill[]; currency: Curr
                           {status === 'paid' && <span className="bg-secondary text-white font-caption px-2 py-0.5 rounded border-2 border-border-heavy uppercase">Paid</span>}
                         </h4>
                         <p className={`font-caption ${status === 'overdue' ? 'text-danger' : status === 'paid' ? 'text-secondary' : 'text-warning font-bold'}`}>
-                          {status === 'overdue' ? `Due ${formatDueLabel(bill)}` : status === 'paid' ? 'Settled' : `Due in ${formatDueLabel(bill)}`}
+                          {status === 'paid' ? 'Settled' : formatDueLabel(bill)}
                         </p>
                       </div>
                     </div>
