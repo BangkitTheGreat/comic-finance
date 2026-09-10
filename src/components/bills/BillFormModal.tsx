@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { ComicButton } from "@/components/ui/ComicButton";
 import { BILL_ICONS, type Bill } from "@/lib/bills/types";
 import { createBill, editBill } from "@/lib/bills/actions";
+import { todayIso } from "@/lib/dates";
 
 interface Props {
   open: boolean;
@@ -25,7 +26,7 @@ export function BillFormModal({ open, onClose, editing }: Props) {
 
   const isEdit = editing !== null;
   const action = isEdit ? editBill : createBill;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">

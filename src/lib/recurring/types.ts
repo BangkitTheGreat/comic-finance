@@ -1,10 +1,12 @@
+import type { CategoryName } from "@/lib/transactions/types";
+
 export type Frequency = "weekly" | "monthly" | "yearly";
 
 export interface Recurring {
   id: string;
   merchant: string;
-  category: string;
-  account: string;
+  category: CategoryName;
+  accountId: string;
   type: "income" | "expense";
   amount: number;
   frequency: Frequency;

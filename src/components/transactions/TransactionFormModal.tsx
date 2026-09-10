@@ -1,20 +1,29 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
+import { ActionForm } from "@/components/ui/ActionForm";
 import { ComicButton } from "@/components/ui/ComicButton";
-import { CATEGORIES, ACCOUNTS, type Transaction } from "@/lib/transactions/types";
+import { CATEGORIES, type Transaction } from "@/lib/transactions/types";
 import { createTransaction, editTransaction } from "@/lib/transactions/actions";
+import type { AccountOption } from "@/lib/accounts/types";
+
+import { amountInputValue } from "@/lib/currency/input";
+import { todayIso } from "@/lib/dates";
+import type { Currency } from "@/lib/currency/types";
 
 interface Props {
+  currency: Currency;
   open: boolean;
   onClose: () => void;
   editing: Transaction | null;
-  accounts?: string[];
+  accounts: AccountOption[];
 }
 
-export function TransactionFormModal({ open, onClose, editing, accounts }: Props) {
-  const accountOptions = accounts && accounts.length > 0 ? accounts : ACCOUNTS;
-  const formRef = useRef<HTMLFormElement>(null);
+export function TransactionFormModal({ open, onClose, editing, accounts, currency }: Props) {
+
+  const [inputCurrency] = useState(currency);
+  const step = inputCurrency.fractionDigits === 0 ? "1" : "0.01";
+  const displayedAmount = editing ? amountInputValue(editing.amount, inputCurrency) : "";
 
   useEffect(() => {
     if (!open) return;
@@ -30,7 +39,7 @@ export function TransactionFormModal({ open, onClose, editing, accounts }: Props
   const isEdit = editing !== null;
   const action = isEdit ? editTransaction : createTransaction;
   const defaultType = editing && editing.amount > 0 ? "income" : "expense";
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -52,14 +61,12 @@ export function TransactionFormModal({ open, onClose, editing, accounts }: Props
           </button>
         </div>
 
-        <form
-          ref={formRef}
-          action={async (formData) => {
-            await action(formData);
-            onClose();
-          }}
+        {accounts.length === 0 && <p role="status" className="mb-4 font-body-md">Create an account before adding transactions. <a href="/accounts" className="text-primary underline">Manage accounts</a></p>}
+        <ActionForm
+          action={action} onSuccess={onClose} disabled={accounts.length === 0}
           className="flex flex-col gap-4"
         >
+          <input type="hidden" name="currencyCode" value={inputCurrency.code} />
           {isEdit && <input type="hidden" name="id" value={editing.id} />}
 
           <div className="flex gap-2">
@@ -102,18 +109,20 @@ export function TransactionFormModal({ open, onClose, editing, accounts }: Props
           </div>
 
           <div>
-            <label className="block font-label-md mb-2 text-ink">Amount</label>
+            <label className="block font-label-md mb-2 text-ink" htmlFor="money-amount">Amount ({inputCurrency.code})</label>
             <input
-              name="amount"
+              id="money-amount" name="amount"
               type="number"
-              step="0.01"
-              min="0"
+              step={step}
+              min={editing && Number(displayedAmount) === 0 ? "0" : step} max="1000000000000"
               required
-              defaultValue={editing ? Math.abs(editing.amount) : ""}
+              defaultValue={displayedAmount}
               className="w-full bg-surface-container-low border-2 border-border-heavy rounded-lg p-3 font-body-md focus:outline-none focus:border-primary"
               placeholder="0.00"
             />
           </div>
+
+          <p className="font-caption text-on-surface-variant">Amounts use the app’s fixed exchange rates. Saving the same displayed amount preserves its value.</p>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -131,12 +140,13 @@ export function TransactionFormModal({ open, onClose, editing, accounts }: Props
             <div>
               <label className="block font-label-md mb-2 text-ink">Account</label>
               <select
-                name="account"
-                defaultValue={editing?.account ?? accountOptions[0]}
+                name="accountId" required
+                defaultValue={editing ? (accounts.some(a => a.id === editing.accountId) ? editing.accountId : "") : accounts[0]?.id}
                 className="w-full bg-surface-container-low border-2 border-border-heavy rounded-lg p-3 font-body-md focus:outline-none focus:border-primary cursor-pointer"
               >
-                {accountOptions.map((a) => (
-                  <option key={a} value={a}>{a}</option>
+                {editing && !accounts.some(a => a.id === editing.accountId) && <option value="" disabled>Select an existing account</option>}
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>{a.name}</option>
                 ))}
               </select>
             </div>
@@ -172,7 +182,7 @@ export function TransactionFormModal({ open, onClose, editing, accounts }: Props
               {isEdit ? "Save Changes" : "Add Transaction"}
             </ComicButton>
           </div>
-        </form>
+        </ActionForm>
       </div>
     </div>
   );

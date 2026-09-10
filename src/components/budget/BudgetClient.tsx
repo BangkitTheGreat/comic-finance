@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { ComicCard } from "@/components/ui/ComicCard";
 import { ComicButton } from "@/components/ui/ComicButton";
+import { ActionForm } from "@/components/ui/ActionForm";
 import { editBudgetLimit } from "@/lib/budget/actions";
+import { amountInputValue } from "@/lib/currency/input";
 import { formatMoney, type Currency } from "@/lib/currency/types";
 
 export interface BudgetCategoryView {
@@ -73,7 +75,8 @@ export function BudgetClient({ categories, currency, notifyBudget = true }: { ca
                 <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
-            <form action={async (fd) => { await editBudgetLimit(fd); setEditing(null); }} className="flex flex-col gap-4">
+            <ActionForm action={editBudgetLimit} onSuccess={() => setEditing(null)} className="flex flex-col gap-4">
+              <input type="hidden" name="currencyCode" value={currency.code} />
               <input type="hidden" name="id" value={editing.id} />
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-full ${editing.color} border-2 border-border-heavy flex items-center justify-center`}>
@@ -82,15 +85,21 @@ export function BudgetClient({ categories, currency, notifyBudget = true }: { ca
                 <span className="font-headline-md text-ink">{editing.name}</span>
               </div>
               <div>
-                <label className="block font-label-md mb-2 text-ink">Monthly Limit</label>
-                <input name="budget" type="number" step="0.01" min="0" required defaultValue={editing.budget} className="w-full bg-surface-container-low border-2 border-border-heavy rounded-lg p-3 font-body-md focus:outline-none focus:border-primary" />
+                <label className="block font-label-md mb-2 text-ink">Monthly Limit ({currency.code})</label>
+                <input
+                  name="budget" type="number"
+                  step={currency.fractionDigits === 0 ? "1" : "0.01"}
+                  min="0" max="1000000000000" required
+                  defaultValue={amountInputValue(editing.budget, currency)}
+                  className="w-full bg-surface-container-low border-2 border-border-heavy rounded-lg p-3 font-body-md focus:outline-none focus:border-primary"
+                />
                 <p className="font-caption text-on-surface-variant mt-1">Currently spent: {formatMoney(editing.spent, currency)}</p>
               </div>
               <div className="flex justify-end gap-2 mt-2">
                 <ComicButton type="button" variant="outline" onClick={() => setEditing(null)}>Cancel</ComicButton>
                 <ComicButton type="submit" variant="primary" icon="save">Save Limit</ComicButton>
               </div>
-            </form>
+            </ActionForm>
           </div>
         </div>
       )}

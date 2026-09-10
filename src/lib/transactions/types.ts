@@ -3,20 +3,24 @@ export type TransactionType = "income" | "expense";
 export interface Transaction {
   id: string;
   merchant: string;
-  category: string;
-  account: string;
+  category: CategoryName;
+  accountId: string;
   date: string;
   amount: number;
   note?: string;
 }
 
 export interface CategoryMeta {
-  name: string;
-  icon: string;
-  color: string;
+  readonly name: string;
+  readonly icon: string;
+  readonly color: string;
 }
 
-export const CATEGORIES: CategoryMeta[] = [
+// The single source of truth for categories. `as const` makes the names a
+// literal union (CategoryName), so anything referencing a category — a
+// transaction, a recurring rule, a budget — fails to compile on a typo
+// instead of silently matching nothing at runtime.
+export const CATEGORIES = [
   { name: "Food & Dining", icon: "restaurant", color: "bg-pop-pink" },
   { name: "Salary", icon: "payments", color: "bg-secondary-container" },
   { name: "Transport", icon: "directions_car", color: "bg-pop-blue" },
@@ -26,15 +30,11 @@ export const CATEGORIES: CategoryMeta[] = [
   { name: "Shopping", icon: "shopping_cart", color: "bg-pop-pink" },
   { name: "Health", icon: "favorite", color: "bg-error-container" },
   { name: "Other", icon: "category", color: "bg-surface-variant" },
-];
+] as const satisfies readonly CategoryMeta[];
 
-export const ACCOUNTS: string[] = [
-  "Checking",
-  "Savings",
-  "Credit Card",
-  "Debit Card",
-  "Investment",
-];
+export type CategoryName = (typeof CATEGORIES)[number]["name"];
+
+export const CATEGORY_NAMES: readonly CategoryName[] = CATEGORIES.map((c) => c.name);
 
 const DEFAULT_CATEGORY: CategoryMeta = {
   name: "Other",

@@ -10,7 +10,13 @@ export type AccountType = "checking" | "savings" | "credit" | "debit" | "investm
 
 export interface AccountWithBalance extends Account {
   balance: number;
+  /** Records pointing at this account. An account in use can't be deleted
+   *  outright — its records must be moved to another account first. */
+  transactionCount: number;
+  recurringCount: number;
 }
+
+export type AccountOption = Pick<Account, "id" | "name">;
 
 export interface AccountTypeMeta {
   type: AccountType;

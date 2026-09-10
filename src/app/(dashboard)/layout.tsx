@@ -1,14 +1,16 @@
+import { connection } from "next/server";
 import { Sidebar } from "@/components/navigation/Sidebar";
 import { MobileNav } from "@/components/navigation/MobileNav";
 import { processDueRecurring } from "@/lib/recurring/store";
 import { getCurrencyCode } from "@/lib/currency/store";
 import { getSettings } from "@/lib/settings/store";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  await connection();
   processDueRecurring();
   const currency = getCurrencyCode();
   const settings = getSettings();

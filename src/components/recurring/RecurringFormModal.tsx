@@ -1,19 +1,30 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { ActionForm } from "@/components/ui/ActionForm";
 import { ComicButton } from "@/components/ui/ComicButton";
 import { CATEGORIES } from "@/lib/transactions/types";
 import { FREQUENCIES, type Recurring } from "@/lib/recurring/types";
 import { createRecurring, editRecurring } from "@/lib/recurring/actions";
+import type { AccountOption } from "@/lib/accounts/types";
+
+import { amountInputValue } from "@/lib/currency/input";
+import { todayIso } from "@/lib/dates";
+import type { Currency } from "@/lib/currency/types";
 
 interface Props {
+  currency: Currency;
   open: boolean;
   onClose: () => void;
   editing: Recurring | null;
-  accounts: string[];
+  accounts: AccountOption[];
 }
 
-export function RecurringFormModal({ open, onClose, editing, accounts }: Props) {
+export function RecurringFormModal({ open, onClose, editing, accounts, currency }: Props) {
+  const [inputCurrency] = useState(currency);
+  const step = inputCurrency.fractionDigits === 0 ? "1" : "0.01";
+  const displayedAmount = editing ? amountInputValue(editing.amount, inputCurrency) : "";
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -27,8 +38,7 @@ export function RecurringFormModal({ open, onClose, editing, accounts }: Props) 
 
   const isEdit = editing !== null;
   const action = isEdit ? editRecurring : createRecurring;
-  const today = new Date().toISOString().slice(0, 10);
-  const accountOptions = accounts.length > 0 ? accounts : ["Checking"];
+  const today = todayIso();
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -41,7 +51,9 @@ export function RecurringFormModal({ open, onClose, editing, accounts }: Props) 
           </button>
         </div>
 
-        <form action={async (fd) => { await action(fd); onClose(); }} className="flex flex-col gap-4">
+        {accounts.length === 0 && <p role="status" className="mb-4 font-body-md">Create an account before adding transactions. <a href="/accounts" className="text-primary underline">Manage accounts</a></p>}
+        <ActionForm action={action} onSuccess={onClose} disabled={accounts.length === 0} className="flex flex-col gap-4">
+          <input type="hidden" name="currencyCode" value={inputCurrency.code} />
           {isEdit && <input type="hidden" name="id" value={editing.id} />}
 
           <div className="flex gap-2">
@@ -61,9 +73,11 @@ export function RecurringFormModal({ open, onClose, editing, accounts }: Props) 
           </div>
 
           <div>
-            <label className="block font-label-md mb-2 text-ink">Amount</label>
-            <input name="amount" type="number" step="0.01" min="0" required defaultValue={editing ? editing.amount : ""} className="w-full bg-surface-container-low border-2 border-border-heavy rounded-lg p-3 font-body-md focus:outline-none focus:border-primary" placeholder="0.00" />
+            <label className="block font-label-md mb-2 text-ink" htmlFor="money-amount">Amount ({inputCurrency.code})</label>
+            <input id="money-amount" name="amount" type="number" step={step} min={editing && Number(displayedAmount) === 0 ? "0" : step} max="1000000000000" required defaultValue={displayedAmount} className="w-full bg-surface-container-low border-2 border-border-heavy rounded-lg p-3 font-body-md focus:outline-none focus:border-primary" placeholder="0.00" />
           </div>
+
+          <p className="font-caption text-on-surface-variant">Amounts use the app’s fixed exchange rates. Saving the same displayed amount preserves its value.</p>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -74,11 +88,14 @@ export function RecurringFormModal({ open, onClose, editing, accounts }: Props) 
             </div>
             <div>
               <label className="block font-label-md mb-2 text-ink">Account</label>
-              <select name="account" defaultValue={editing?.account ?? accountOptions[0]} className="w-full bg-surface-container-low border-2 border-border-heavy rounded-lg p-3 font-body-md focus:outline-none focus:border-primary cursor-pointer">
-                {accountOptions.map((a) => <option key={a} value={a}>{a}</option>)}
+              <select name="accountId" required defaultValue={editing ? (accounts.some(a => a.id === editing.accountId) ? editing.accountId : "") : accounts[0]?.id} className="w-full bg-surface-container-low border-2 border-border-heavy rounded-lg p-3 font-body-md focus:outline-none focus:border-primary cursor-pointer">
+                {editing && !accounts.some(a => a.id === editing.accountId) && <option value="" disabled>Select an existing account</option>}
+                {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
             </div>
           </div>
+
+          <p className="font-caption text-on-surface-variant">Amounts use the app’s fixed exchange rates. Saving the same displayed amount preserves its value.</p>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -97,7 +114,7 @@ export function RecurringFormModal({ open, onClose, editing, accounts }: Props) 
             <ComicButton type="button" variant="outline" onClick={onClose}>Cancel</ComicButton>
             <ComicButton type="submit" variant="primary" icon={isEdit ? "save" : "add"}>{isEdit ? "Save Changes" : "Add Recurring"}</ComicButton>
           </div>
-        </form>
+        </ActionForm>
       </div>
     </div>
   );

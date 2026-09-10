@@ -1,17 +1,27 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { ActionForm } from "@/components/ui/ActionForm";
 import { ComicButton } from "@/components/ui/ComicButton";
 import { ACCOUNT_TYPES, type AccountWithBalance } from "@/lib/accounts/types";
 import { createAccount, editAccount } from "@/lib/accounts/actions";
+import { amountInputValue } from "@/lib/currency/input";
+import type { Currency } from "@/lib/currency/types";
 
 interface Props {
   open: boolean;
   onClose: () => void;
   editing: AccountWithBalance | null;
+  currency: Currency;
 }
 
-export function AccountFormModal({ open, onClose, editing }: Props) {
+export function AccountFormModal({ open, onClose, editing, currency }: Props) {
+  const [inputCurrency] = useState(currency);
+  const step = inputCurrency.fractionDigits === 0 ? "1" : "0.01";
+  // Signed: unlike a transaction, an account's balance carries its own sign
+  // (a credit card can open with existing debt) with no separate income/expense toggle.
+  const displayedBalance = editing ? amountInputValue(editing.initialBalance, inputCurrency, { signed: true }) : "0";
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -41,13 +51,11 @@ export function AccountFormModal({ open, onClose, editing }: Props) {
           </button>
         </div>
 
-        <form
-          action={async (formData) => {
-            await action(formData);
-            onClose();
-          }}
+        <ActionForm
+          action={action} onSuccess={onClose}
           className="flex flex-col gap-4"
         >
+          <input type="hidden" name="currencyCode" value={inputCurrency.code} />
           {isEdit && <input type="hidden" name="id" value={editing.id} />}
 
           <div>
@@ -76,17 +84,21 @@ export function AccountFormModal({ open, onClose, editing }: Props) {
           </div>
 
           <div>
-            <label className="block font-label-md mb-2 text-ink">{isEdit ? "Initial Balance" : "Starting Balance"}</label>
+            <label className="block font-label-md mb-2 text-ink">{isEdit ? "Initial Balance" : "Starting Balance"} ({inputCurrency.code})</label>
             <input
               name="initialBalance"
               type="number"
-              step="0.01"
-              defaultValue={editing ? editing.initialBalance : 0}
+              step={step}
+              max="1000000000000"
+              min="-1000000000000"
+              defaultValue={displayedBalance}
               className="w-full bg-surface-container-low border-2 border-border-heavy rounded-lg p-3 font-body-md focus:outline-none focus:border-primary"
               placeholder="0.00"
             />
-            {isEdit && (
+            {isEdit ? (
               <p className="font-caption text-on-surface-variant mt-1">Transactions adjust this. Editing here changes the opening balance only.</p>
+            ) : (
+              <p className="font-caption text-on-surface-variant mt-1">Negative is fine for a card with existing debt.</p>
             )}
           </div>
 
@@ -96,7 +108,7 @@ export function AccountFormModal({ open, onClose, editing }: Props) {
               {isEdit ? "Save Changes" : "Link Account"}
             </ComicButton>
           </div>
-        </form>
+        </ActionForm>
       </div>
     </div>
   );

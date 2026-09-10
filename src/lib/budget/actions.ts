@@ -1,13 +1,21 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { updateBudgetLimit } from "./store";
+import { getBudgetCategory, updateBudgetLimit } from "./store";
+import { runMutation, ValidationError } from "@/lib/action-result";
+import { textField } from "@/lib/form-validation";
+import { currencyAmountField } from "@/lib/currency/amount";
+import { revalidateFinancialPages } from "@/lib/financial-cache";
 
-export async function editBudgetLimit(formData: FormData) {
-  const id = String(formData.get("id") ?? "");
-  if (!id) throw new Error("Missing budget category id");
-  const budget = Math.abs(Number(formData.get("budget") ?? 0)) || 0;
-  updateBudgetLimit(id, budget);
-  revalidatePath("/budget");
-  revalidatePath("/");
+export async function editBudgetLimit(form: FormData) {
+  return runMutation(() => {
+    const id = textField(form, "id");
+    const existing = getBudgetCategory(id);
+    if (!existing) throw new ValidationError("Budget category no longer exists.");
+    // A budget limit may be zero (pausing a category) but never negative,
+    // unlike an account balance.
+    const budget = currencyAmountField(form, { field: "budget", positive: false, existingBase: existing.budget });
+    if (budget < 0) throw new ValidationError("Budget limit cannot be negative.", "budget");
+    updateBudgetLimit(id, budget);
+    revalidateFinancialPages();
+  });
 }

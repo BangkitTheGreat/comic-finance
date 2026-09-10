@@ -2,10 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { setCurrencyCode } from "./store";
-import type { CurrencyCode } from "./types";
+import { CURRENCY_LIST } from "./types";
+import { enumField } from "@/lib/form-validation";
+import { runMutation } from "@/lib/action-result";
 
 export async function changeCurrency(formData: FormData) {
-  const code = String(formData.get("code") ?? "USD") as CurrencyCode;
-  setCurrencyCode(code);
-  revalidatePath("/", "layout");
+  return runMutation(() => {
+    const code = enumField(formData, "code", CURRENCY_LIST.map(c => c.code));
+    setCurrencyCode(code);
+    revalidatePath("/", "layout");
+  });
 }

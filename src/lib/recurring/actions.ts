@@ -1,59 +1,48 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { addRecurring, removeRecurring, updateRecurring } from "./store";
-import type { Frequency } from "./types";
+import { addRecurring, removeRecurring, updateRecurring, getRecurring } from "./store";
+import { FREQUENCIES } from "./types";
+import { CATEGORY_NAMES } from "@/lib/transactions/types";
+import { getAccount } from "@/lib/accounts/store";
+import { runMutation, ValidationError } from "@/lib/action-result";
+import { textField, enumField, dateField } from "@/lib/form-validation";
+import { currencyAmountField } from "@/lib/currency/amount";
+import { revalidateFinancialPages } from "@/lib/financial-cache";
 
-function revalidateRecurring() {
-  revalidatePath("/recurring");
-  revalidatePath("/transactions");
-  revalidatePath("/");
+function buildData(form: FormData, existingBase?: number) {
+  const accountId = textField(form, "accountId");
+  if (!getAccount(accountId)) throw new ValidationError("Selected account does not exist.", "accountId");
+  return { merchant: textField(form, "merchant"),
+    category: enumField(form, "category", CATEGORY_NAMES), accountId,
+    type: enumField(form, "type", ["income", "expense"]), amount: currencyAmountField(form, { existingBase }),
+    frequency: enumField(form, "frequency", FREQUENCIES.map(f => f.value)),
+    nextDue: dateField(form, "nextDue") };
 }
-
-function buildData(formData: FormData) {
-  const type = String(formData.get("type") ?? "expense") as "income" | "expense";
-  return {
-    merchant: String(formData.get("merchant") ?? "").trim(),
-    category: String(formData.get("category") ?? "Other"),
-    account: String(formData.get("account") ?? "Checking"),
-    type,
-    amount: Math.abs(Number(formData.get("amount") ?? 0)) || 0,
-    frequency: String(formData.get("frequency") ?? "monthly") as Frequency,
-    nextDue: String(formData.get("nextDue") ?? "").trim(),
-  };
+export async function createRecurring(form: FormData) {
+  return runMutation(() => { addRecurring({ ...buildData(form), active: true }); revalidateFinancialPages(); });
 }
-
-export async function createRecurring(formData: FormData) {
-  const data = buildData(formData);
-  if (!data.merchant || !data.nextDue || data.amount <= 0) {
-    throw new Error("Merchant, amount and next date are required");
-  }
-  addRecurring({ ...data, active: true });
-  revalidateRecurring();
+export async function editRecurring(form: FormData) {
+  return runMutation(() => {
+    const id = textField(form, "id");
+    const existing = getRecurring(id);
+    if (!existing) throw new ValidationError("Recurring rule no longer exists.");
+    updateRecurring(id, buildData(form, existing.amount));
+    revalidateFinancialPages();
+  });
 }
-
-export async function editRecurring(formData: FormData) {
-  const id = String(formData.get("id") ?? "");
-  if (!id) throw new Error("Missing recurring id");
-  const data = buildData(formData);
-  if (!data.merchant || !data.nextDue || data.amount <= 0) {
-    throw new Error("Merchant, amount and next date are required");
-  }
-  updateRecurring(id, data);
-  revalidateRecurring();
+export async function toggleRecurring(form: FormData) {
+  return runMutation(() => {
+    const id = textField(form, "id");
+    const active = enumField(form, "active", ["true", "false"]) === "true";
+    const rule = getRecurring(id);
+    if (!rule) throw new ValidationError("Recurring rule no longer exists.");
+    if (active && !getAccount(rule.accountId)) throw new ValidationError("Choose an existing account before resuming this rule.");
+    updateRecurring(id, { active }); revalidateFinancialPages();
+  });
 }
-
-export async function toggleRecurring(formData: FormData) {
-  const id = String(formData.get("id") ?? "");
-  const active = String(formData.get("active") ?? "") === "true";
-  if (!id) throw new Error("Missing recurring id");
-  updateRecurring(id, { active });
-  revalidateRecurring();
-}
-
-export async function deleteRecurring(formData: FormData) {
-  const id = String(formData.get("id") ?? "");
-  if (!id) throw new Error("Missing recurring id");
-  removeRecurring(id);
-  revalidateRecurring();
+export async function deleteRecurring(form: FormData) {
+  return runMutation(() => {
+    if (!removeRecurring(textField(form, "id"))) throw new ValidationError("Recurring rule no longer exists.");
+    revalidateFinancialPages();
+  });
 }

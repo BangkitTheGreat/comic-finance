@@ -1,10 +1,7 @@
 import { listTransactions } from "./store";
 import { getAccountsWithBalances } from "@/lib/accounts/store";
+import { currentMonth, toIsoMonth } from "@/lib/dates";
 import type { Transaction } from "./types";
-
-function currentMonth(): string {
-  return new Date().toISOString().slice(0, 7);
-}
 
 export function formatShortDate(iso: string): string {
   const d = new Date(iso + "T00:00:00");
@@ -84,7 +81,7 @@ export function getMonthlySeries(count = 3): MonthlyPoint[] {
   const points: MonthlyPoint[] = [];
   for (let i = count - 1; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const key = toIsoMonth(d);
     points.push({
       month: key,
       label: d.toLocaleDateString("en-US", { month: "short" }),

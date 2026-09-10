@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { ActionForm } from "@/components/ui/ActionForm";
 import { ComicButton } from "@/components/ui/ComicButton";
 import { RecurringFormModal } from "./RecurringFormModal";
 import { deleteRecurring, toggleRecurring } from "@/lib/recurring/actions";
 import { getCategoryMeta } from "@/lib/transactions/types";
 import { formatMoney, formatMoneyAbs, type Currency } from "@/lib/currency/types";
 import type { Recurring } from "@/lib/recurring/types";
+import type { AccountOption } from "@/lib/accounts/types";
 
 function formatDue(iso: string): string {
   const d = new Date(iso + "T00:00:00");
@@ -14,7 +16,7 @@ function formatDue(iso: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export function RecurringClient({ recurring, accounts, currency }: { recurring: Recurring[]; accounts: string[]; currency: Currency }) {
+export function RecurringClient({ recurring, accounts, currency }: { recurring: Recurring[]; accounts: AccountOption[]; currency: Currency }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Recurring | null>(null);
 
@@ -74,19 +76,19 @@ export function RecurringClient({ recurring, accounts, currency }: { recurring: 
                   <button onClick={() => openEdit(rec)} className="py-1.5 px-3 rounded-lg border-2 border-border-heavy bg-surface font-label-md flex items-center gap-1 comic-interactive shadow-comic-sm">
                     <span className="material-symbols-outlined text-[18px]">edit</span> Edit
                   </button>
-                  <form action={async (fd) => { if (confirm(`Delete "${rec.merchant}"?`)) await deleteRecurring(fd); }}>
+                  <ActionForm action={deleteRecurring} confirmation={`Delete "${rec.merchant}"?`}>
                     <input type="hidden" name="id" value={rec.id} />
                     <button type="submit" className="py-1.5 px-3 rounded-lg border-2 border-border-heavy bg-error-container text-on-error-container font-label-md flex items-center gap-1 comic-interactive shadow-comic-sm">
                       <span className="material-symbols-outlined text-[18px]">delete</span> Delete
                     </button>
-                  </form>
-                  <form action={toggleRecurring}>
+                  </ActionForm>
+                  <ActionForm action={toggleRecurring}>
                     <input type="hidden" name="id" value={rec.id} />
                     <input type="hidden" name="active" value={(!rec.active).toString()} />
                     <ComicButton type="submit" variant={rec.active ? "outline" : "primary"} className="py-1.5 px-3" icon={rec.active ? "pause" : "play_arrow"}>
                       {rec.active ? "Pause" : "Resume"}
                     </ComicButton>
-                  </form>
+                  </ActionForm>
                 </div>
               </div>
             );
@@ -94,7 +96,7 @@ export function RecurringClient({ recurring, accounts, currency }: { recurring: 
         </div>
       )}
 
-      <RecurringFormModal open={modalOpen} onClose={() => setModalOpen(false)} editing={editing} accounts={accounts} />
+      <RecurringFormModal key={`${modalOpen}-${editing?.id ?? "new"}`} open={modalOpen} onClose={() => setModalOpen(false)} editing={editing} accounts={accounts} currency={currency} />
     </>
   );
 }

@@ -1,10 +1,5 @@
 import type { Bill } from "./types";
-
-function isoOffset(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
-}
+import { isoOffsetDays as isoOffset } from "@/lib/dates";
 
 const seed: Bill[] = [
   { id: "b1", name: "Internet", amount: 79.99, dueDate: isoOffset(2), icon: "wifi", paid: false },

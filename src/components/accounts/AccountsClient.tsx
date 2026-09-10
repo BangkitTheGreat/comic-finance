@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ActionForm } from "@/components/ui/ActionForm";
 import { ComicButton } from "@/components/ui/ComicButton";
 import { AccountFormModal } from "./AccountFormModal";
 import { deleteAccount } from "@/lib/accounts/actions";
@@ -8,14 +9,24 @@ import { getAccountTypeMeta, type AccountWithBalance } from "@/lib/accounts/type
 import { formatMoneyAbs, type Currency } from "@/lib/currency/types";
 import Link from "next/link";
 
+function usageLabel(account: AccountWithBalance): string {
+  const parts: string[] = [];
+  if (account.transactionCount > 0) parts.push(`${account.transactionCount} transaction${account.transactionCount === 1 ? "" : "s"}`);
+  if (account.recurringCount > 0) parts.push(`${account.recurringCount} recurring rule${account.recurringCount === 1 ? "" : "s"}`);
+  return parts.join(" and ");
+}
+
 export function AccountsClient({ accounts, currency }: { accounts: AccountWithBalance[]; currency: Currency }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<AccountWithBalance | null>(null);
+  const [moving, setMoving] = useState<AccountWithBalance | null>(null);
 
   const total = accounts.reduce((s, a) => s + a.balance, 0);
 
   const openAdd = () => { setEditing(null); setModalOpen(true); };
   const openEdit = (a: AccountWithBalance) => { setEditing(a); setModalOpen(true); };
+  const isInUse = (a: AccountWithBalance) => a.transactionCount > 0 || a.recurringCount > 0;
+  const moveTargets = moving ? accounts.filter((a) => a.id !== moving.id) : [];
 
   return (
     <>
@@ -53,12 +64,23 @@ export function AccountsClient({ accounts, currency }: { accounts: AccountWithBa
                     <button onClick={() => openEdit(acc)} className="w-8 h-8 rounded-lg border-2 border-border-heavy bg-surface flex items-center justify-center comic-interactive shadow-comic-sm" aria-label={`Edit ${acc.name}`}>
                       <span className="material-symbols-outlined text-[16px]">edit</span>
                     </button>
-                    <form action={async (fd) => { if (confirm(`Delete "${acc.name}"? Transactions stay but won't map to an account.`)) await deleteAccount(fd); }}>
-                      <input type="hidden" name="id" value={acc.id} />
-                      <button type="submit" className="w-8 h-8 rounded-lg border-2 border-border-heavy bg-error-container text-on-error-container flex items-center justify-center comic-interactive shadow-comic-sm" aria-label={`Delete ${acc.name}`}>
+                    {isInUse(acc) ? (
+                      <button
+                        onClick={() => setMoving(acc)}
+                        className="w-8 h-8 rounded-lg border-2 border-border-heavy bg-error-container text-on-error-container flex items-center justify-center comic-interactive shadow-comic-sm"
+                        aria-label={`Delete ${acc.name}, which still has ${usageLabel(acc)}`}
+                        title={`Still has ${usageLabel(acc)} — they must be moved first`}
+                      >
                         <span className="material-symbols-outlined text-[16px]">delete</span>
                       </button>
-                    </form>
+                    ) : (
+                      <ActionForm action={deleteAccount} confirmation={`Delete "${acc.name}"?`}>
+                        <input type="hidden" name="id" value={acc.id} />
+                        <button type="submit" className="w-8 h-8 rounded-lg border-2 border-border-heavy bg-error-container text-on-error-container flex items-center justify-center comic-interactive shadow-comic-sm" aria-label={`Delete ${acc.name}`}>
+                          <span className="material-symbols-outlined text-[16px]">delete</span>
+                        </button>
+                      </ActionForm>
+                    )}
                   </div>
                 </div>
                 <div>
@@ -69,7 +91,7 @@ export function AccountsClient({ accounts, currency }: { accounts: AccountWithBa
                   </p>
                 </div>
                 <div className="border-t-2 border-border-heavy pt-4 mt-auto">
-                  <Link href={`/transactions?account=${encodeURIComponent(acc.name)}`} className="text-primary font-label-md hover:underline flex items-center gap-1">
+                  <Link href={`/transactions?accountId=${encodeURIComponent(acc.id)}`} className="text-primary font-label-md hover:underline flex items-center gap-1">
                     <span className="material-symbols-outlined text-[18px]">history</span>
                     View History
                   </Link>
@@ -80,7 +102,59 @@ export function AccountsClient({ accounts, currency }: { accounts: AccountWithBa
         </div>
       )}
 
-      <AccountFormModal open={modalOpen} onClose={() => setModalOpen(false)} editing={editing} />
+      {moving && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-border-heavy/40 backdrop-blur-sm" onClick={() => setMoving(null)} />
+          <div role="dialog" aria-modal="true" aria-labelledby="move-modal-title" className="relative z-10 w-full max-w-sm bg-surface border-2 border-border-heavy rounded-xl shadow-comic-heavy p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 id="move-modal-title" className="font-headline-md text-ink">Delete {moving.name}</h3>
+              <button onClick={() => setMoving(null)} className="w-9 h-9 rounded-full border-2 border-border-heavy bg-surface-container-low flex items-center justify-center comic-interactive shadow-comic-sm" aria-label="Close">
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            {moveTargets.length === 0 ? (
+              <>
+                <p className="font-body-md text-on-surface-variant">
+                  This account still has {usageLabel(moving)}, and it is your only account, so there is nowhere to move them.
+                  Create another account first.
+                </p>
+                <div className="flex justify-end mt-4">
+                  <ComicButton type="button" variant="outline" onClick={() => setMoving(null)}>Close</ComicButton>
+                </div>
+              </>
+            ) : (
+              <ActionForm
+                action={deleteAccount}
+                onSuccess={() => setMoving(null)}
+                confirmation={`Move ${usageLabel(moving)} off "${moving.name}" and delete it?`}
+                className="flex flex-col gap-4"
+              >
+                <input type="hidden" name="id" value={moving.id} />
+                <p className="font-body-md text-on-surface-variant">
+                  This account still has {usageLabel(moving)}. Deleting it moves them to another account, so no history is lost.
+                </p>
+                <div>
+                  <label htmlFor="move-target" className="block font-label-md mb-2 text-ink">Move records to</label>
+                  <select
+                    id="move-target" name="moveToAccountId" required defaultValue={moveTargets[0]?.id}
+                    className="w-full bg-surface-container-low border-2 border-border-heavy rounded-lg p-3 font-body-md focus:outline-none focus:border-primary cursor-pointer"
+                  >
+                    {moveTargets.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                  <p className="font-caption text-on-surface-variant mt-1">Their balance moves with them.</p>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <ComicButton type="button" variant="outline" onClick={() => setMoving(null)}>Cancel</ComicButton>
+                  <ComicButton type="submit" variant="primary" icon="delete">Move and Delete</ComicButton>
+                </div>
+              </ActionForm>
+            )}
+          </div>
+        </div>
+      )}
+
+      <AccountFormModal key={`${modalOpen}-${editing?.id ?? "new"}`} open={modalOpen} onClose={() => setModalOpen(false)} editing={editing} currency={currency} />
     </>
   );
 }

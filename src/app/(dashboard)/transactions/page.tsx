@@ -1,16 +1,16 @@
 import { listTransactions } from "@/lib/transactions/store";
-import { listAccountNames } from "@/lib/accounts/store";
+import { listAccounts } from "@/lib/accounts/store";
 import { getActiveCurrency } from "@/lib/currency/store";
 import { TransactionsClient } from "@/components/transactions/TransactionsClient";
 
 export default async function TransactionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ account?: string }>;
+  searchParams: Promise<{ accountId?: string }>;
 }) {
-  const { account } = await searchParams;
+  const { accountId } = await searchParams;
   const transactions = listTransactions();
-  const accounts = listAccountNames();
+  const accounts = listAccounts();
   const currency = getActiveCurrency();
-  return <TransactionsClient transactions={transactions} accounts={accounts} initialAccount={account ?? "all"} currency={currency} />;
+  return <TransactionsClient key={accountId ?? "all"} transactions={transactions} accounts={accounts} initialAccountId={accountId ?? "all"} currency={currency} />;
 }
