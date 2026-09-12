@@ -7,6 +7,7 @@ import { getBillStatus, formatDueLabel } from "@/lib/bills/types";
 import { getActiveCurrency } from "@/lib/currency/store";
 import { formatMoney } from "@/lib/currency/types";
 import { getSettings } from "@/lib/settings/store";
+import { getTopBudgetUsage } from "@/lib/budget/usage";
 import Link from "next/link";
 
 export default function DashboardPage() {
@@ -16,6 +17,10 @@ export default function DashboardPage() {
   const upcomingBills = listBills();
   const currency = getActiveCurrency();
   const settings = getSettings();
+  const topBudget = getTopBudgetUsage();
+  const budgetInsight = topBudget
+    ? `Spending on ${topBudget.category} is at ${Math.round(topBudget.percent)}% of budget!`
+    : "No budget spending yet this month.";
   return (
     <>
       {/* Header */}
@@ -83,7 +88,7 @@ export default function DashboardPage() {
             {/* Bubble Insight */}
             {settings.notifyBudget && (
             <div className="absolute -top-12 -left-4 md:-left-16 lg:-left-24 bg-surface border-2 border-border-heavy p-3 rounded-xl shadow-[4px_4px_0px_0px_rgba(17,24,39,1)] z-20 max-w-[200px] transform -rotate-3 bubble-tail bubble-tail-white">
-              <p className="font-bubble-text text-on-surface">Spending on Food is at 82% of budget!</p>
+              <p className="font-bubble-text text-on-surface">{budgetInsight}</p>
             </div>
             )}
           </ComicCard>

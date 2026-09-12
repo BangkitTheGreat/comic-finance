@@ -1,5 +1,4 @@
-import { listBudgetCategories } from "@/lib/budget/store";
-import { getCategorySpending } from "@/lib/transactions/analytics";
+import { getBudgetUsage } from "@/lib/budget/usage";
 import { getCategoryMeta } from "@/lib/transactions/types";
 import { BudgetClient } from "@/components/budget/BudgetClient";
 import { getActiveCurrency } from "@/lib/currency/store";
@@ -7,12 +6,10 @@ import { getSettings } from "@/lib/settings/store";
 import { formatMoney } from "@/lib/currency/types";
 
 export default function BudgetPage() {
-  const spending = getCategorySpending();
-  const categories = listBudgetCategories().map((c) => ({
+  const categories = getBudgetUsage().map((c) => ({
     ...c,
     name: c.category,
     icon: getCategoryMeta(c.category).icon,
-    spent: spending.get(c.category) ?? 0,
   }));
   const totalSpent = categories.reduce((s, c) => s + c.spent, 0);
   const totalBudget = categories.reduce((s, c) => s + c.budget, 0);
