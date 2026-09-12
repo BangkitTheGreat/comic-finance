@@ -1,60 +1,57 @@
 import type { Goal } from "./types";
+import { getDb, nextId } from "@/lib/db/client";
 
-const seed: Goal[] = [
-  { id: "g1", name: "Japan Trip", current: 3000, target: 5000, icon: "flight_takeoff", color: "text-primary", bgColor: "bg-primary" },
-  { id: "g2", name: "New Car Downpayment", current: 8000, target: 10000, icon: "directions_car", color: "text-pop-purple", bgColor: "bg-pop-purple" },
-];
-
-interface Store {
-  items: Goal[];
-  counter: number;
+interface GoalRow {
+  id: string;
+  name: string;
+  current: number;
+  target: number;
+  icon: string;
+  color: string;
+  bg_color: string;
 }
 
-const globalForStore = globalThis as unknown as { __goalStore?: Store };
-
-function getStore(): Store {
-  if (!globalForStore.__goalStore) {
-    globalForStore.__goalStore = { items: seed.map(item => ({ ...item })), counter: seed.length };
-  }
-  return globalForStore.__goalStore;
+function toGoal(row: GoalRow): Goal {
+  return { id: row.id, name: row.name, current: row.current, target: row.target, icon: row.icon, color: row.color, bgColor: row.bg_color };
 }
 
-export function listGoals(): Goal[] {
-  return getStore().items;
+export function listGoals(workspaceId: string): Goal[] {
+  const rows = getDb().prepare("SELECT * FROM goals WHERE workspace_id = ? ORDER BY id").all(workspaceId) as unknown as GoalRow[];
+  return rows.map(toGoal);
 }
 
-export function getGoal(id: string): Goal | undefined {
-  return getStore().items.find((g) => g.id === id);
+export function getGoal(workspaceId: string, id: string): Goal | undefined {
+  const row = getDb().prepare("SELECT * FROM goals WHERE workspace_id = ? AND id = ?").get(workspaceId, id) as GoalRow | undefined;
+  return row ? toGoal(row) : undefined;
 }
 
-export function addGoal(data: Omit<Goal, "id">): Goal {
-  const store = getStore();
-  store.counter += 1;
-  const goal: Goal = { ...data, id: `g${store.counter}` };
-  store.items.push(goal);
-  return goal;
+export function addGoal(workspaceId: string, data: Omit<Goal, "id">): Goal {
+  const id = nextId(workspaceId, "goal", "g");
+  getDb()
+    .prepare("INSERT INTO goals (id, workspace_id, name, current, target, icon, color, bg_color) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+    .run(id, workspaceId, data.name, data.current, data.target, data.icon, data.color, data.bgColor);
+  return { id, ...data };
 }
 
-export function updateGoal(id: string, data: Partial<Omit<Goal, "id">>): Goal | undefined {
-  const store = getStore();
-  const goal = store.items.find((g) => g.id === id);
-  if (!goal) return undefined;
-  Object.assign(goal, data);
-  return goal;
+export function updateGoal(workspaceId: string, id: string, data: Partial<Omit<Goal, "id">>): Goal | undefined {
+  const existing = getGoal(workspaceId, id);
+  if (!existing) return undefined;
+  const updated = { ...existing, ...data };
+  getDb()
+    .prepare("UPDATE goals SET name = ?, current = ?, target = ?, icon = ?, color = ?, bg_color = ? WHERE workspace_id = ? AND id = ?")
+    .run(updated.name, updated.current, updated.target, updated.icon, updated.color, updated.bgColor, workspaceId, id);
+  return updated;
 }
 
-export function removeGoal(id: string): boolean {
-  const store = getStore();
-  const idx = store.items.findIndex((g) => g.id === id);
-  if (idx === -1) return false;
-  store.items.splice(idx, 1);
-  return true;
+export function removeGoal(workspaceId: string, id: string): boolean {
+  const { changes } = getDb().prepare("DELETE FROM goals WHERE workspace_id = ? AND id = ?").run(workspaceId, id);
+  return Number(changes) > 0;
 }
 
-export function contributeToGoal(id: string, amount: number): Goal | undefined {
-  const store = getStore();
-  const goal = store.items.find((g) => g.id === id);
-  if (!goal) return undefined;
-  goal.current = Math.max(0, goal.current + amount);
-  return goal;
+export function contributeToGoal(workspaceId: string, id: string, amount: number): Goal | undefined {
+  const existing = getGoal(workspaceId, id);
+  if (!existing) return undefined;
+  const current = Math.max(0, existing.current + amount);
+  getDb().prepare("UPDATE goals SET current = ? WHERE workspace_id = ? AND id = ?").run(current, workspaceId, id);
+  return { ...existing, current };
 }

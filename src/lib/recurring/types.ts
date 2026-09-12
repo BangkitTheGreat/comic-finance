@@ -1,11 +1,10 @@
-import type { CategoryName } from "@/lib/transactions/types";
-
 export type Frequency = "weekly" | "monthly" | "yearly";
 
 export interface Recurring {
   id: string;
   merchant: string;
-  category: CategoryName;
+  /** References a row in the workspace's `categories` table, never a name. */
+  categoryId: string;
   accountId: string;
   type: "income" | "expense";
   amount: number;

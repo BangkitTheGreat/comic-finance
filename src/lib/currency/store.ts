@@ -1,27 +1,16 @@
 import type { CurrencyCode } from "./types";
 import { getCurrencyByCode, type Currency } from "./types";
+import { getDb } from "@/lib/db/client";
 
-interface Store {
-  code: CurrencyCode;
+export function getCurrencyCode(workspaceId: string): CurrencyCode {
+  const row = getDb().prepare("SELECT code FROM currency WHERE workspace_id = ?").get(workspaceId) as { code: CurrencyCode } | undefined;
+  return row?.code ?? "USD";
 }
 
-const globalForStore = globalThis as unknown as { __currencyStore?: Store };
-
-function getStore(): Store {
-  if (!globalForStore.__currencyStore) {
-    globalForStore.__currencyStore = { code: "USD" };
-  }
-  return globalForStore.__currencyStore;
+export function getActiveCurrency(workspaceId: string): Currency {
+  return getCurrencyByCode(getCurrencyCode(workspaceId));
 }
 
-export function getCurrencyCode(): CurrencyCode {
-  return getStore().code;
-}
-
-export function getActiveCurrency(): Currency {
-  return getCurrencyByCode(getStore().code);
-}
-
-export function setCurrencyCode(code: CurrencyCode): void {
-  getStore().code = code;
+export function setCurrencyCode(workspaceId: string, code: CurrencyCode): void {
+  getDb().prepare("UPDATE currency SET code = ? WHERE workspace_id = ?").run(code, workspaceId);
 }

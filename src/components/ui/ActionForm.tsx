@@ -10,16 +10,20 @@ interface Props {
   onSuccess?: () => void;
   confirmation?: string;
   disabled?: boolean;
+  /** Per-form overrides for the field-name -> label map used in error messages. */
+  labels?: Record<string, string>;
 }
 
-const labels: Record<string, string> = {
+const defaultLabels: Record<string, string> = {
   merchant: "Name", name: "Account name", amount: "Amount", initialBalance: "Starting balance",
-  accountId: "Account", category: "Category", type: "Type", date: "Date", nextDue: "Next due",
+  accountId: "Account", category: "Category", categoryId: "Category", type: "Type", date: "Date", nextDue: "Next due",
   currencyCode: "Currency", frequency: "Frequency", note: "Note", active: "Status", budget: "Monthly limit",
+  limit: "Monthly limit", month: "Month", status: "Status", icon: "Icon", color: "Color",
   moveToAccountId: "Move records to",
 };
 
-export function ActionForm({ action, children, className, onSuccess, confirmation, disabled = false }: Props) {
+export function ActionForm({ action, children, className, onSuccess, confirmation, disabled = false, labels: overrides }: Props) {
+  const labels = overrides ? { ...defaultLabels, ...overrides } : defaultLabels;
   const [pending, startTransition] = useTransition();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const locked = useRef(false);

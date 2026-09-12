@@ -1,90 +1,90 @@
 import type { Transaction } from "./types";
+import { getDb, nextId } from "@/lib/db/client";
 
-const seed: Transaction[] = [
-  { id: "t1", merchant: "Joe's Diner", category: "Food & Dining", accountId: "a1", date: "2026-06-11", amount: -32.5 },
-  { id: "t2", merchant: "Tech Corp Inc.", category: "Salary", accountId: "a1", date: "2026-06-10", amount: 4250.0 },
-  { id: "t3", merchant: "City Transit", category: "Transport", accountId: "a1", date: "2026-06-09", amount: -2.75 },
-  { id: "t4", merchant: "MegaMart", category: "Groceries", accountId: "a1", date: "2026-06-08", amount: -145.2 },
-];
-
-interface Store {
-  items: Transaction[];
-  counter: number;
+interface TransactionRow {
+  id: string;
+  merchant: string;
+  category_id: string;
+  account_id: string;
+  date: string;
+  amount: number;
+  note: string | null;
 }
 
-const globalForStore = globalThis as unknown as { __txStore?: Store };
-
-function getStore(): Store {
-  if (!globalForStore.__txStore) {
-    globalForStore.__txStore = { items: seed.map((t) => ({ ...t })), counter: seed.length };
-  }
-  return globalForStore.__txStore;
+function toTransaction(row: TransactionRow): Transaction {
+  return {
+    id: row.id,
+    merchant: row.merchant,
+    categoryId: row.category_id,
+    accountId: row.account_id,
+    date: row.date,
+    amount: row.amount,
+    note: row.note ?? undefined,
+  };
 }
 
-function sortByDateDesc(items: Transaction[]): Transaction[] {
-  return [...items].sort((a, b) => b.date.localeCompare(a.date));
-}
-
-export function transactionTotalsByAccount(): Map<string, number> {
+export function transactionTotalsByAccount(workspaceId: string): Map<string, number> {
   const totals = new Map<string, number>();
-  for (const tx of getStore().items) totals.set(tx.accountId, (totals.get(tx.accountId) ?? 0) + tx.amount);
+  for (const tx of listTransactions(workspaceId)) totals.set(tx.accountId, (totals.get(tx.accountId) ?? 0) + tx.amount);
   return totals;
 }
 
-export function hasTransactionsForAccount(id: string): boolean {
-  return getStore().items.some(t => t.accountId === id);
+export function hasTransactionsForAccount(workspaceId: string, id: string): boolean {
+  const row = getDb()
+    .prepare("SELECT 1 FROM transactions WHERE workspace_id = ? AND account_id = ? LIMIT 1")
+    .get(workspaceId, id);
+  return row !== undefined;
 }
 
-export function transactionCountsByAccount(): Map<string, number> {
+export function transactionCountsByAccount(workspaceId: string): Map<string, number> {
   const counts = new Map<string, number>();
-  for (const tx of getStore().items) counts.set(tx.accountId, (counts.get(tx.accountId) ?? 0) + 1);
+  for (const tx of listTransactions(workspaceId)) counts.set(tx.accountId, (counts.get(tx.accountId) ?? 0) + 1);
   return counts;
 }
 
 /** Repoints every transaction on `fromId` at `toId`. Returns how many moved. */
-export function reassignTransactions(fromId: string, toId: string): number {
-  const store = getStore();
-  let moved = 0;
-  store.items = store.items.map((tx) => {
-    if (tx.accountId !== fromId) return tx;
-    moved += 1;
-    return { ...tx, accountId: toId };
-  });
-  return moved;
+export function reassignTransactions(workspaceId: string, fromId: string, toId: string): number {
+  const { changes } = getDb()
+    .prepare("UPDATE transactions SET account_id = ? WHERE workspace_id = ? AND account_id = ?")
+    .run(toId, workspaceId, fromId);
+  return Number(changes);
 }
 
-export function listTransactions(): Transaction[] {
-  return sortByDateDesc(getStore().items);
+export function listTransactions(workspaceId: string): Transaction[] {
+  const rows = getDb()
+    .prepare("SELECT * FROM transactions WHERE workspace_id = ? ORDER BY date DESC, id DESC")
+    .all(workspaceId) as unknown as TransactionRow[];
+  return rows.map(toTransaction);
 }
 
-export function getTransaction(id: string): Transaction | undefined {
-  return getStore().items.find((t) => t.id === id);
+export function getTransaction(workspaceId: string, id: string): Transaction | undefined {
+  const row = getDb().prepare("SELECT * FROM transactions WHERE workspace_id = ? AND id = ?").get(workspaceId, id) as TransactionRow | undefined;
+  return row ? toTransaction(row) : undefined;
 }
 
-export function addTransaction(data: Omit<Transaction, "id">): Transaction {
-  const store = getStore();
-  store.counter += 1;
-  const tx: Transaction = { ...data, id: `t${store.counter}` };
-  store.items.push(tx);
-  return tx;
+export function addTransaction(workspaceId: string, data: Omit<Transaction, "id">): Transaction {
+  const id = nextId(workspaceId, "transaction", "t");
+  getDb()
+    .prepare("INSERT INTO transactions (id, workspace_id, merchant, category_id, account_id, date, amount, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+    .run(id, workspaceId, data.merchant, data.categoryId, data.accountId, data.date, data.amount, data.note ?? null);
+  return { id, ...data };
 }
 
 export function updateTransaction(
+  workspaceId: string,
   id: string,
   data: Partial<Omit<Transaction, "id">>
 ): Transaction | undefined {
-  const store = getStore();
-  const idx = store.items.findIndex((t) => t.id === id);
-  if (idx === -1) return undefined;
-  const updated = { ...store.items[idx], ...data };
-  store.items[idx] = updated;
+  const existing = getTransaction(workspaceId, id);
+  if (!existing) return undefined;
+  const updated = { ...existing, ...data };
+  getDb()
+    .prepare("UPDATE transactions SET merchant = ?, category_id = ?, account_id = ?, date = ?, amount = ?, note = ? WHERE workspace_id = ? AND id = ?")
+    .run(updated.merchant, updated.categoryId, updated.accountId, updated.date, updated.amount, updated.note ?? null, workspaceId, id);
   return updated;
 }
 
-export function removeTransaction(id: string): boolean {
-  const store = getStore();
-  const idx = store.items.findIndex((t) => t.id === id);
-  if (idx === -1) return false;
-  store.items.splice(idx, 1);
-  return true;
+export function removeTransaction(workspaceId: string, id: string): boolean {
+  const { changes } = getDb().prepare("DELETE FROM transactions WHERE workspace_id = ? AND id = ?").run(workspaceId, id);
+  return Number(changes) > 0;
 }

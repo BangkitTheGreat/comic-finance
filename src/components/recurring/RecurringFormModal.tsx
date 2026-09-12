@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ActionForm } from "@/components/ui/ActionForm";
 import { ComicButton } from "@/components/ui/ComicButton";
-import { CATEGORIES } from "@/lib/transactions/types";
+import { ComicDialog } from "@/components/ui/ComicDialog";
+import type { CategoryOption } from "@/lib/categories/types";
 import { FREQUENCIES, type Recurring } from "@/lib/recurring/types";
 import { createRecurring, editRecurring } from "@/lib/recurring/actions";
 import type { AccountOption } from "@/lib/accounts/types";
@@ -18,38 +19,22 @@ interface Props {
   onClose: () => void;
   editing: Recurring | null;
   accounts: AccountOption[];
+  categories: CategoryOption[];
 }
 
-export function RecurringFormModal({ open, onClose, editing, accounts, currency }: Props) {
+export function RecurringFormModal({ open, onClose, editing, accounts, categories, currency }: Props) {
   const [inputCurrency] = useState(currency);
   const step = inputCurrency.fractionDigits === 0 ? "1" : "0.01";
   const displayedAmount = editing ? amountInputValue(editing.amount, inputCurrency) : "";
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
 
-  if (!open) return null;
 
   const isEdit = editing !== null;
   const action = isEdit ? editRecurring : createRecurring;
   const today = todayIso();
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-border-heavy/40 backdrop-blur-sm" onClick={onClose} />
-      <div role="dialog" aria-modal="true" aria-labelledby="rec-modal-title" className="relative z-10 w-full max-w-md bg-surface border-2 border-border-heavy rounded-xl shadow-comic-heavy p-6 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h3 id="rec-modal-title" className="font-headline-md text-ink">{isEdit ? "Edit Recurring" : "Add Recurring"}</h3>
-          <button onClick={onClose} className="w-9 h-9 rounded-full border-2 border-border-heavy bg-surface-container-low flex items-center justify-center comic-interactive shadow-comic-sm" aria-label="Close">
-            <span className="material-symbols-outlined text-[20px]">close</span>
-          </button>
-        </div>
+    <ComicDialog open={open} onClose={onClose} title={isEdit ? "Edit recurring rule" : "Add recurring rule"}>
 
         {accounts.length === 0 && <p role="status" className="mb-4 font-body-md">Create an account before adding transactions. <a href="/accounts" className="text-primary underline">Manage accounts</a></p>}
         <ActionForm action={action} onSuccess={onClose} disabled={accounts.length === 0} className="flex flex-col gap-4">
@@ -82,8 +67,8 @@ export function RecurringFormModal({ open, onClose, editing, accounts, currency 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block font-label-md mb-2 text-ink">Category</label>
-              <select name="category" defaultValue={editing?.category ?? CATEGORIES[0].name} className="w-full bg-surface-container-low border-2 border-border-heavy rounded-lg p-3 font-body-md focus:outline-none focus:border-primary cursor-pointer">
-                {CATEGORIES.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}
+              <select name="categoryId" defaultValue={editing?.categoryId ?? categories[0]?.id} className="w-full bg-surface-container-low border-2 border-border-heavy rounded-lg p-3 font-body-md focus:outline-none focus:border-primary cursor-pointer">
+                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
             <div>
@@ -115,7 +100,6 @@ export function RecurringFormModal({ open, onClose, editing, accounts, currency 
             <ComicButton type="submit" variant="primary" icon={isEdit ? "save" : "add"}>{isEdit ? "Save Changes" : "Add Recurring"}</ComicButton>
           </div>
         </ActionForm>
-      </div>
-    </div>
+    </ComicDialog>
   );
 }

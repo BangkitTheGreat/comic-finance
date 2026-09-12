@@ -5,7 +5,8 @@ import { ActionForm } from "@/components/ui/ActionForm";
 import { ComicButton } from "@/components/ui/ComicButton";
 import { TransactionFormModal } from "./TransactionFormModal";
 import { deleteTransaction } from "@/lib/transactions/actions";
-import { getCategoryMeta, type Transaction } from "@/lib/transactions/types";
+import type { Transaction } from "@/lib/transactions/types";
+import type { CategoryOption } from "@/lib/categories/types";
 import { formatMoneyAbs, type Currency } from "@/lib/currency/types";
 import type { AccountOption } from "@/lib/accounts/types";
 
@@ -18,17 +19,20 @@ function formatDate(iso: string): string {
 interface Props {
   transactions: Transaction[];
   accounts: AccountOption[];
+  categories: CategoryOption[];
   initialAccountId?: string;
   currency: Currency;
 }
 
-export function TransactionsClient({ transactions, accounts, initialAccountId = "all", currency }: Props) {
+export function TransactionsClient({ transactions, accounts, categories, initialAccountId = "all", currency }: Props) {
   const [query, setQuery] = useState("");
   const [accountId, setAccountId] = useState(initialAccountId);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Transaction | null>(null);
 
   const accountNameById = useMemo(() => new Map(accounts.map((a) => [a.id, a.name])), [accounts]);
+  const categoryById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
+  const UNKNOWN_CATEGORY = { name: "Unknown category", icon: "help", color: "bg-surface-variant" };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -36,12 +40,12 @@ export function TransactionsClient({ transactions, accounts, initialAccountId = 
       const matchesQuery =
         !q ||
         tx.merchant.toLowerCase().includes(q) ||
-        tx.category.toLowerCase().includes(q) ||
+        (categoryById.get(tx.categoryId)?.name.toLowerCase().includes(q) ?? false) ||
         (tx.note?.toLowerCase().includes(q) ?? false);
       const matchesAccount = accountId === "all" || tx.accountId === accountId;
       return matchesQuery && matchesAccount;
     });
-  }, [transactions, query, accountId]);
+  }, [transactions, query, accountId, categoryById]);
 
   const openAdd = () => {
     setEditing(null);
@@ -108,7 +112,7 @@ export function TransactionsClient({ transactions, accounts, initialAccountId = 
         ) : (
           <div className="flex flex-col">
             {filtered.map((tx) => {
-              const meta = getCategoryMeta(tx.category);
+              const meta = categoryById.get(tx.categoryId) ?? UNKNOWN_CATEGORY;
               return (
                 <div
                   key={tx.id}
@@ -120,7 +124,7 @@ export function TransactionsClient({ transactions, accounts, initialAccountId = 
                   <div>
                     <h3 className="font-body-md font-bold text-ink">{tx.merchant}</h3>
                     <p className="font-caption text-on-surface-variant md:hidden">{formatDate(tx.date)} • {accountNameById.get(tx.accountId) ?? "Unknown"}</p>
-                    <span className="inline-block mt-1 px-2 py-0.5 border-2 border-border-heavy rounded-full bg-white font-caption shadow-[2px_2px_0px_0px_#111827]">{tx.category}</span>
+                    <span className="inline-block mt-1 px-2 py-0.5 border-2 border-border-heavy rounded-full bg-white font-caption shadow-[2px_2px_0px_0px_#111827]">{meta.name}</span>
                   </div>
                   <div className="hidden md:block font-body-md text-on-surface-variant w-28">{formatDate(tx.date)}</div>
                   <div className="hidden md:block font-body-md text-on-surface-variant w-28">{accountNameById.get(tx.accountId) ?? "Unknown"}</div>
@@ -168,7 +172,7 @@ export function TransactionsClient({ transactions, accounts, initialAccountId = 
         )}
       </div>
 
-      <TransactionFormModal key={`${modalOpen}-${editing?.id ?? "new"}`} open={modalOpen} onClose={() => setModalOpen(false)} editing={editing} accounts={accounts} currency={currency} />
+      <TransactionFormModal categories={categories} key={`${modalOpen}-${editing?.id ?? "new"}`} open={modalOpen} onClose={() => setModalOpen(false)} editing={editing} accounts={accounts} currency={currency} />
     </>
   );
 }

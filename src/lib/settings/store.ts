@@ -1,25 +1,26 @@
 import type { Settings, SettingKey } from "./types";
 import { DEFAULT_SETTINGS } from "./types";
+import { getDb } from "@/lib/db/client";
 
-interface Store {
-  settings: Settings;
+interface SettingsRow {
+  notify_bills: number;
+  notify_budget: number;
+  reduce_motion: number;
 }
 
-const globalForStore = globalThis as unknown as { __settingsStore?: Store };
-
-function getStore(): Store {
-  if (!globalForStore.__settingsStore) {
-    globalForStore.__settingsStore = { settings: { ...DEFAULT_SETTINGS } };
-  }
-  return globalForStore.__settingsStore;
+function toSettings(row: SettingsRow): Settings {
+  return { notifyBills: Boolean(row.notify_bills), notifyBudget: Boolean(row.notify_budget), reduceMotion: Boolean(row.reduce_motion) };
 }
 
-export function getSettings(): Settings {
-  return getStore().settings;
+export function getSettings(workspaceId: string): Settings {
+  const row = getDb().prepare("SELECT notify_bills, notify_budget, reduce_motion FROM settings WHERE workspace_id = ?").get(workspaceId) as
+    | SettingsRow
+    | undefined;
+  return row ? toSettings(row) : { ...DEFAULT_SETTINGS };
 }
 
-export function setSetting(key: SettingKey, value: boolean): Settings {
-  const store = getStore();
-  store.settings = { ...store.settings, [key]: value };
-  return store.settings;
+export function setSetting(workspaceId: string, key: SettingKey, value: boolean): Settings {
+  const column = { notifyBills: "notify_bills", notifyBudget: "notify_budget", reduceMotion: "reduce_motion" }[key];
+  getDb().prepare(`UPDATE settings SET ${column} = ? WHERE workspace_id = ?`).run(Number(value), workspaceId);
+  return getSettings(workspaceId);
 }

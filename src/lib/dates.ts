@@ -37,3 +37,22 @@ export function isoOffsetDays(days: number): string {
   date.setDate(date.getDate() + days);
   return toIsoDate(date);
 }
+
+const ISO_MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+/** Strict "YYYY-MM" check — the key budgets are stored under. */
+export function isValidIsoMonth(s: string): boolean {
+  return ISO_MONTH_RE.test(s);
+}
+
+/** "2026-09" -> "2026-08". Month arithmetic on the 1st, so no day overflow. */
+export function shiftMonth(month: string, delta: number): string {
+  const [y, m] = month.split("-").map(Number);
+  return toIsoMonth(new Date(y, m - 1 + delta, 1));
+}
+
+/** "2026-09" -> "September 2026". */
+export function formatMonthLabel(month: string): string {
+  const [y, m] = month.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}

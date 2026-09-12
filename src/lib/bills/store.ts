@@ -1,58 +1,54 @@
 import type { Bill } from "./types";
-import { isoOffsetDays as isoOffset } from "@/lib/dates";
+import { getDb, nextId } from "@/lib/db/client";
 
-const seed: Bill[] = [
-  { id: "b1", name: "Internet", amount: 79.99, dueDate: isoOffset(2), icon: "wifi", paid: false },
-  { id: "b2", name: "Electricity", amount: 124.5, dueDate: isoOffset(5), icon: "bolt", paid: false },
-  { id: "b3", name: "Water", amount: 45.0, dueDate: isoOffset(-1), icon: "water_drop", paid: false },
-];
-
-interface Store {
-  items: Bill[];
-  counter: number;
+interface BillRow {
+  id: string;
+  name: string;
+  amount: number;
+  due_date: string;
+  icon: string;
+  paid: number;
 }
 
-const globalForStore = globalThis as unknown as { __billStore?: Store };
-
-function getStore(): Store {
-  if (!globalForStore.__billStore) {
-    globalForStore.__billStore = { items: seed.map(item => ({ ...item })), counter: seed.length };
-  }
-  return globalForStore.__billStore;
+function toBill(row: BillRow): Bill {
+  return { id: row.id, name: row.name, amount: row.amount, dueDate: row.due_date, icon: row.icon, paid: Boolean(row.paid) };
 }
 
-export function listBills(): Bill[] {
-  return [...getStore().items].sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+export function listBills(workspaceId: string): Bill[] {
+  const rows = getDb()
+    .prepare("SELECT * FROM bills WHERE workspace_id = ? ORDER BY due_date")
+    .all(workspaceId) as unknown as BillRow[];
+  return rows.map(toBill);
 }
 
-export function getBill(id: string): Bill | undefined {
-  return getStore().items.find((b) => b.id === id);
+export function getBill(workspaceId: string, id: string): Bill | undefined {
+  const row = getDb().prepare("SELECT * FROM bills WHERE workspace_id = ? AND id = ?").get(workspaceId, id) as BillRow | undefined;
+  return row ? toBill(row) : undefined;
 }
 
-export function addBill(data: Omit<Bill, "id">): Bill {
-  const store = getStore();
-  store.counter += 1;
-  const bill: Bill = { ...data, id: `b${store.counter}` };
-  store.items.push(bill);
-  return bill;
+export function addBill(workspaceId: string, data: Omit<Bill, "id">): Bill {
+  const id = nextId(workspaceId, "bill", "b");
+  getDb()
+    .prepare("INSERT INTO bills (id, workspace_id, name, amount, due_date, icon, paid) VALUES (?, ?, ?, ?, ?, ?, ?)")
+    .run(id, workspaceId, data.name, data.amount, data.dueDate, data.icon, Number(data.paid));
+  return { id, ...data };
 }
 
-export function updateBill(id: string, data: Partial<Omit<Bill, "id">>): Bill | undefined {
-  const store = getStore();
-  const bill = store.items.find((b) => b.id === id);
-  if (!bill) return undefined;
-  Object.assign(bill, data);
-  return bill;
+export function updateBill(workspaceId: string, id: string, data: Partial<Omit<Bill, "id">>): Bill | undefined {
+  const existing = getBill(workspaceId, id);
+  if (!existing) return undefined;
+  const updated = { ...existing, ...data };
+  getDb()
+    .prepare("UPDATE bills SET name = ?, amount = ?, due_date = ?, icon = ?, paid = ? WHERE workspace_id = ? AND id = ?")
+    .run(updated.name, updated.amount, updated.dueDate, updated.icon, Number(updated.paid), workspaceId, id);
+  return updated;
 }
 
-export function removeBill(id: string): boolean {
-  const store = getStore();
-  const idx = store.items.findIndex((b) => b.id === id);
-  if (idx === -1) return false;
-  store.items.splice(idx, 1);
-  return true;
+export function removeBill(workspaceId: string, id: string): boolean {
+  const { changes } = getDb().prepare("DELETE FROM bills WHERE workspace_id = ? AND id = ?").run(workspaceId, id);
+  return Number(changes) > 0;
 }
 
-export function setBillPaid(id: string, paid: boolean): Bill | undefined {
-  return updateBill(id, { paid });
+export function setBillPaid(workspaceId: string, id: string, paid: boolean): Bill | undefined {
+  return updateBill(workspaceId, id, { paid });
 }

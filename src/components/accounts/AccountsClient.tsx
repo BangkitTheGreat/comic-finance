@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ActionForm } from "@/components/ui/ActionForm";
 import { ComicButton } from "@/components/ui/ComicButton";
+import { ComicDialog } from "@/components/ui/ComicDialog";
 import { AccountFormModal } from "./AccountFormModal";
 import { deleteAccount } from "@/lib/accounts/actions";
 import { getAccountTypeMeta, type AccountWithBalance } from "@/lib/accounts/types";
@@ -103,15 +104,7 @@ export function AccountsClient({ accounts, currency }: { accounts: AccountWithBa
       )}
 
       {moving && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-border-heavy/40 backdrop-blur-sm" onClick={() => setMoving(null)} />
-          <div role="dialog" aria-modal="true" aria-labelledby="move-modal-title" className="relative z-10 w-full max-w-sm bg-surface border-2 border-border-heavy rounded-xl shadow-comic-heavy p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 id="move-modal-title" className="font-headline-md text-ink">Delete {moving.name}</h3>
-              <button onClick={() => setMoving(null)} className="w-9 h-9 rounded-full border-2 border-border-heavy bg-surface-container-low flex items-center justify-center comic-interactive shadow-comic-sm" aria-label="Close">
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            </div>
+        <ComicDialog open onClose={() => setMoving(null)} title={`Delete ${moving.name}`}>
 
             {moveTargets.length === 0 ? (
               <>
@@ -150,8 +143,7 @@ export function AccountsClient({ accounts, currency }: { accounts: AccountWithBa
                 </div>
               </ActionForm>
             )}
-          </div>
-        </div>
+        </ComicDialog>
       )}
 
       <AccountFormModal key={`${modalOpen}-${editing?.id ?? "new"}`} open={modalOpen} onClose={() => setModalOpen(false)} editing={editing} currency={currency} />

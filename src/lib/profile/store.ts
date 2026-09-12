@@ -1,46 +1,27 @@
+import { getDb } from "@/lib/db/client";
+
 export interface UserProfile {
   name: string;
   email: string;
 }
 
-const defaultProfile: UserProfile = {
-  name: "Penny User",
-  email: "penny@example.com",
-};
-
-interface Store {
-  profile: UserProfile;
+interface ProfileRow {
+  name: string;
+  email: string;
 }
 
-const globalForStore = globalThis as unknown as { __profileStore?: Store };
-
-function getStore(): Store {
-  if (!globalForStore.__profileStore) {
-    globalForStore.__profileStore = { profile: { ...defaultProfile } };
-  }
-  return globalForStore.__profileStore;
+export function getProfile(workspaceId: string): UserProfile {
+  const row = getDb().prepare("SELECT name, email FROM profiles WHERE workspace_id = ?").get(workspaceId) as ProfileRow | undefined;
+  if (!row) return { name: "Penny User", email: "penny@example.com" };
+  // Rebuilt as a plain object literal, never returned as-is: node:sqlite hands
+  // back rows with a null prototype, and React refuses to serialize those
+  // across the Server -> Client Component boundary (Sidebar/MobileNav take
+  // this profile as a prop). Every other store maps its rows for the same
+  // reason.
+  return { name: row.name, email: row.email };
 }
 
-export function getProfile(): UserProfile {
-  const { name, email } = getStore().profile;
+export function updateProfile(workspaceId: string, name: string, email: string): UserProfile {
+  getDb().prepare("UPDATE profiles SET name = ?, email = ? WHERE workspace_id = ?").run(name, email, workspaceId);
   return { name, email };
-}
-
-export function updateProfile(name: string, email: string): UserProfile {
-  const store = getStore();
-  store.profile = { name, email };
-  return store.profile;
-}
-
-export function resetAllData(): void {
-  const g = globalThis as unknown as Record<string, unknown>;
-  delete g.__txStore;
-  delete g.__accountStore;
-  delete g.__goalStore;
-  delete g.__billStore;
-  delete g.__recurringStore;
-  delete g.__budgetStore;
-  delete g.__profileStore;
-  delete g.__currencyStore;
-  delete g.__settingsStore;
 }

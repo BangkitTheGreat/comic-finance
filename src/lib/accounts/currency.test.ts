@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => ({ value: "test-workspace" }) }) }));
 import { createAccount, editAccount } from "./actions";
 import { getAccount, listAccounts } from "./store";
+import { resetWorkspaceForTest, TEST_WORKSPACE_ID as WS } from "@/lib/workspace/testing";
 
 function form(overrides: Record<string, string | undefined> = {}) {
   const data = new FormData();
@@ -13,10 +15,10 @@ function form(overrides: Record<string, string | undefined> = {}) {
   return data;
 }
 
-const byName = (name: string) => listAccounts().find((a) => a.name === name);
+const byName = (name: string) => listAccounts(WS).find((a) => a.name === name);
 
 beforeEach(() => {
-  Reflect.deleteProperty(globalThis, "__accountStore");
+  resetWorkspaceForTest();
   vi.clearAllMocks();
 });
 
@@ -50,7 +52,7 @@ describe("account starting balance: currency-aware, sign-aware", () => {
     const eurDisplay = "-" + (777.77 * 0.92).toFixed(2);
     const edit = await editAccount(form({ id: account.id, currencyCode: "EUR", initialBalance: eurDisplay, name: "Drift Check" }));
     expect(edit.ok).toBe(true);
-    expect(getAccount(account.id)?.initialBalance).toBe(-777.77);
+    expect(getAccount(WS, account.id)?.initialBalance).toBe(-777.77);
   });
 
   it("rejects a balance beyond the magnitude cap in either direction", async () => {

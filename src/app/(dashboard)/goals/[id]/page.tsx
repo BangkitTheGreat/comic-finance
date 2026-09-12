@@ -1,18 +1,19 @@
 import { ComicCard } from "@/components/ui/ComicCard";
-import { ComicButton } from "@/components/ui/ComicButton";
 import { getGoal } from "@/lib/goals/store";
-import { contributeGoal, deleteGoal } from "@/lib/goals/actions";
+import { GoalDetailActions } from "@/components/goals/GoalDetailActions";
 import { getActiveCurrency } from "@/lib/currency/store";
 import { formatMoney } from "@/lib/currency/types";
+import { getWorkspaceId } from "@/lib/workspace/context";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 export default async function GoalDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const goal = getGoal(id);
+  const workspaceId = await getWorkspaceId();
+  const goal = getGoal(workspaceId, id);
   if (!goal) notFound();
 
-  const currency = getActiveCurrency();
+  const currency = getActiveCurrency(workspaceId);
   const percent = Math.min((goal.current / goal.target) * 100, 100);
   const remaining = Math.max(goal.target - goal.current, 0);
 
@@ -50,26 +51,7 @@ export default async function GoalDetailPage({ params }: { params: Promise<{ id:
         </ComicCard>
 
         <div className="col-span-1 lg:col-span-4 flex flex-col gap-6">
-          <ComicCard>
-            <h3 className="font-headline-md mb-4">Add Funds</h3>
-            <form action={contributeGoal} className="flex flex-col gap-3">
-              <input type="hidden" name="id" value={goal.id} />
-              <input name="amount" type="number" step="0.01" required className="w-full bg-surface-container-low border-2 border-border-heavy rounded-lg p-3 font-body-md focus:border-primary" placeholder="Amount (use - to withdraw)" />
-              <ComicButton type="submit" variant="primary" icon="add" className="w-full">Contribute</ComicButton>
-            </form>
-          </ComicCard>
-
-          <ComicCard>
-            <h3 className="font-headline-md mb-4 text-danger flex items-center gap-2">
-              <span className="material-symbols-outlined">warning</span>
-              Delete Goal
-            </h3>
-            <p className="font-body-md text-on-surface-variant mb-4">This permanently removes the goal.</p>
-            <form action={deleteGoal}>
-              <input type="hidden" name="id" value={goal.id} />
-              <ComicButton type="submit" variant="danger" icon="delete" className="w-full">Delete Goal</ComicButton>
-            </form>
-          </ComicCard>
+          <GoalDetailActions goalId={goal.id} goalName={goal.name} currency={currency} />
         </div>
       </div>
     </>

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ComicButton } from "@/components/ui/ComicButton";
 import { BillFormModal } from "./BillFormModal";
+import { ActionForm } from "@/components/ui/ActionForm";
 import { deleteBill, payBill, unpayBill } from "@/lib/bills/actions";
 import { getBillStatus, formatDueLabel, daysUntil, type Bill } from "@/lib/bills/types";
 import { formatMoney, type Currency } from "@/lib/currency/types";
@@ -111,23 +112,18 @@ export function BillsClient({ bills, currency }: { bills: Bill[]; currency: Curr
                     <button onClick={() => openEdit(bill)} className="py-1.5 px-3 rounded-lg border-2 border-border-heavy bg-surface font-label-md flex items-center gap-1 comic-interactive shadow-comic-sm">
                       <span className="material-symbols-outlined text-[18px]">edit</span> Edit
                     </button>
-                    <form action={async (fd) => { if (confirm(`Delete "${bill.name}"?`)) await deleteBill(fd); }}>
+                    <ActionForm action={deleteBill} confirmation={`Delete "${bill.name}"? This cannot be undone.`}>
                       <input type="hidden" name="id" value={bill.id} />
                       <button type="submit" className="py-1.5 px-3 rounded-lg border-2 border-border-heavy bg-error-container text-on-error-container font-label-md flex items-center gap-1 comic-interactive shadow-comic-sm">
                         <span className="material-symbols-outlined text-[18px]">delete</span> Delete
                       </button>
-                    </form>
-                    {bill.paid ? (
-                      <form action={unpayBill}>
-                        <input type="hidden" name="id" value={bill.id} />
-                        <ComicButton type="submit" variant="outline" className="py-1.5 px-3" icon="undo">Unpay</ComicButton>
-                      </form>
-                    ) : (
-                      <form action={payBill}>
-                        <input type="hidden" name="id" value={bill.id} />
-                        <ComicButton type="submit" variant="primary" className="py-1.5 px-3" icon="check_circle">Pay Now</ComicButton>
-                      </form>
-                    )}
+                    </ActionForm>
+                    <ActionForm action={bill.paid ? unpayBill : payBill}>
+                      <input type="hidden" name="id" value={bill.id} />
+                      {bill.paid
+                        ? <ComicButton type="submit" variant="outline" className="py-1.5 px-3" icon="undo">Unpay</ComicButton>
+                        : <ComicButton type="submit" variant="primary" className="py-1.5 px-3" icon="check_circle">Pay now</ComicButton>}
+                    </ActionForm>
                   </div>
                 </div>
               );
@@ -136,7 +132,7 @@ export function BillsClient({ bills, currency }: { bills: Bill[]; currency: Curr
         )}
       </section>
 
-      <BillFormModal open={modalOpen} onClose={() => setModalOpen(false)} editing={editing} />
+      <BillFormModal open={modalOpen} onClose={() => setModalOpen(false)} editing={editing} currency={currency} />
     </>
   );
 }

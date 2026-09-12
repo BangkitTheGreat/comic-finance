@@ -1,123 +1,74 @@
 "use client";
 
-import { useEffect } from "react";
+import { ActionForm } from "@/components/ui/ActionForm";
 import { ComicButton } from "@/components/ui/ComicButton";
+import { ComicDialog } from "@/components/ui/ComicDialog";
 import { BILL_ICONS, type Bill } from "@/lib/bills/types";
 import { createBill, editBill } from "@/lib/bills/actions";
+import { amountInputValue } from "@/lib/currency/input";
+import type { Currency } from "@/lib/currency/types";
 import { todayIso } from "@/lib/dates";
 
 interface Props {
   open: boolean;
   onClose: () => void;
   editing: Bill | null;
+  currency: Currency;
 }
 
-export function BillFormModal({ open, onClose, editing }: Props) {
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+const inputClass = "w-full bg-surface-container-low border-2 border-border-heavy rounded-lg p-3 font-body-md focus:outline-none focus:border-primary";
 
-  if (!open) return null;
-
+export function BillFormModal({ open, onClose, editing, currency }: Props) {
   const isEdit = editing !== null;
-  const action = isEdit ? editBill : createBill;
-  const today = todayIso();
+  const step = currency.fractionDigits === 0 ? "1" : "0.01";
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-border-heavy/40 backdrop-blur-sm" onClick={onClose} />
-      <div role="dialog" aria-modal="true" aria-labelledby="bill-modal-title" className="relative z-10 w-full max-w-md bg-surface border-2 border-border-heavy rounded-xl shadow-comic-heavy p-6 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h3 id="bill-modal-title" className="font-headline-md text-ink">{isEdit ? "Edit Bill" : "Add Bill"}</h3>
-          <button
-            onClick={onClose}
-            className="w-9 h-9 rounded-full border-2 border-border-heavy bg-surface-container-low flex items-center justify-center comic-interactive shadow-comic-sm"
-            aria-label="Close"
-          >
-            <span className="material-symbols-outlined text-[20px]">close</span>
-          </button>
+    <ComicDialog open={open} onClose={onClose} title={isEdit ? "Edit bill" : "Add bill"}>
+      <ActionForm action={isEdit ? editBill : createBill} onSuccess={onClose} labels={{ name: "Bill name", dueDate: "Due date" }} className="flex flex-col gap-4">
+        <input type="hidden" name="currencyCode" value={currency.code} />
+        {isEdit && <input type="hidden" name="id" value={editing.id} />}
+
+        <div>
+          <label htmlFor="bill-name" className="mb-2 block font-label-md text-ink">Bill name</label>
+          <input id="bill-name" name="name" type="text" required maxLength={100} defaultValue={editing?.name ?? ""} placeholder="e.g. Internet" className={inputClass} />
         </div>
 
-        <form
-          action={async (formData) => {
-            await action(formData);
-            onClose();
-          }}
-          className="flex flex-col gap-4"
-        >
-          {isEdit && <input type="hidden" name="id" value={editing.id} />}
-
+        <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block font-label-md mb-2 text-ink">Bill Name</label>
+            <label htmlFor="bill-amount" className="mb-2 block font-label-md text-ink">Amount ({currency.code})</label>
             <input
-              name="name"
-              type="text"
-              required
-              defaultValue={editing?.name ?? ""}
-              className="w-full bg-surface-container-low border-2 border-border-heavy rounded-lg p-3 font-body-md focus:outline-none focus:border-primary"
-              placeholder="e.g. Internet"
+              id="bill-amount" name="amount" type="number" inputMode="decimal"
+              step={step} min={step} max="1000000000000" required
+              defaultValue={isEdit ? amountInputValue(editing.amount, currency) : ""}
+              placeholder={currency.fractionDigits === 0 ? "80000" : "79.99"}
+              className={inputClass}
             />
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block font-label-md mb-2 text-ink">Amount</label>
-              <input
-                name="amount"
-                type="number"
-                step="0.01"
-                min="0"
-                required
-                defaultValue={editing ? editing.amount : ""}
-                className="w-full bg-surface-container-low border-2 border-border-heavy rounded-lg p-3 font-body-md focus:outline-none focus:border-primary"
-                placeholder="0.00"
-              />
-            </div>
-            <div>
-              <label className="block font-label-md mb-2 text-ink">Due Date</label>
-              <input
-                name="dueDate"
-                type="date"
-                required
-                defaultValue={editing?.dueDate ?? today}
-                className="w-full bg-surface-container-low border-2 border-border-heavy rounded-lg p-3 font-body-md focus:outline-none focus:border-primary cursor-pointer"
-              />
-            </div>
-          </div>
-
           <div>
-            <label className="block font-label-md mb-3 text-ink">Pick an Icon</label>
-            <div className="flex flex-wrap gap-3">
-              {BILL_ICONS.map((icon, i) => (
-                <label key={icon} className="cursor-pointer">
-                  <input
-                    type="radio"
-                    name="icon"
-                    value={icon}
-                    defaultChecked={editing ? editing.icon === icon : i === 0}
-                    className="peer sr-only"
-                  />
-                  <span className="w-11 h-11 rounded-full border-2 border-border-heavy bg-surface-container-low flex items-center justify-center shadow-comic-sm peer-checked:bg-pop-blue peer-checked:ring-4 peer-checked:ring-border-heavy peer-checked:-translate-y-1 transition-all">
-                    <span className="material-symbols-outlined text-ink">{icon}</span>
-                  </span>
-                </label>
-              ))}
-            </div>
+            <label htmlFor="bill-due" className="mb-2 block font-label-md text-ink">Due date</label>
+            <input id="bill-due" name="dueDate" type="date" required defaultValue={editing?.dueDate ?? todayIso()} className={`${inputClass} cursor-pointer`} />
           </div>
+        </div>
 
-          <div className="flex justify-end gap-2 mt-2">
-            <ComicButton type="button" variant="outline" onClick={onClose}>Cancel</ComicButton>
-            <ComicButton type="submit" variant="primary" icon={isEdit ? "save" : "add"}>
-              {isEdit ? "Save Changes" : "Add Bill"}
-            </ComicButton>
+        <fieldset className="m-0 min-w-0 border-0 p-0">
+          <legend className="mb-3 block font-label-md text-ink">Icon</legend>
+          <div className="flex flex-wrap gap-2">
+            {BILL_ICONS.map((icon, i) => (
+              <label key={icon} className="cursor-pointer">
+                <input type="radio" name="icon" value={icon} defaultChecked={editing ? editing.icon === icon : i === 0} className="peer sr-only" />
+                <span className="flex h-11 w-11 items-center justify-center rounded-lg border-2 border-border-heavy bg-surface-container-low text-ink shadow-comic-sm transition-all peer-checked:-translate-y-0.5 peer-checked:bg-primary peer-checked:text-on-primary peer-focus-visible:ring-4 peer-focus-visible:ring-primary/40">
+                  <span className="material-symbols-outlined">{icon}</span>
+                </span>
+              </label>
+            ))}
           </div>
-        </form>
-      </div>
-    </div>
+        </fieldset>
+
+        <div className="mt-2 flex flex-wrap justify-end gap-2">
+          <ComicButton type="button" variant="outline" onClick={onClose}>Cancel</ComicButton>
+          <ComicButton type="submit" variant="primary" icon={isEdit ? "save" : "add"}>{isEdit ? "Save bill" : "Add bill"}</ComicButton>
+        </div>
+      </ActionForm>
+    </ComicDialog>
   );
 }

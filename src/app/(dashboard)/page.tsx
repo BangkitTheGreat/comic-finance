@@ -1,6 +1,6 @@
 import { ComicCard } from "@/components/ui/ComicCard";
 import { getDashboardOverview, getRecentTransactions, formatShortDate } from "@/lib/transactions/analytics";
-import { getCategoryMeta } from "@/lib/transactions/types";
+import { listCategories } from "@/lib/categories/store";
 import { listGoals } from "@/lib/goals/store";
 import { listBills } from "@/lib/bills/store";
 import { getBillStatus, formatDueLabel } from "@/lib/bills/types";
@@ -8,18 +8,21 @@ import { getActiveCurrency } from "@/lib/currency/store";
 import { formatMoney } from "@/lib/currency/types";
 import { getSettings } from "@/lib/settings/store";
 import { getTopBudgetUsage } from "@/lib/budget/usage";
+import { getWorkspaceId } from "@/lib/workspace/context";
 import Link from "next/link";
 
-export default function DashboardPage() {
-  const dashboardOverview = getDashboardOverview();
-  const recentTransactions = getRecentTransactions(4);
-  const savingsGoals = listGoals();
-  const upcomingBills = listBills();
-  const currency = getActiveCurrency();
-  const settings = getSettings();
-  const topBudget = getTopBudgetUsage();
+export default async function DashboardPage() {
+  const workspaceId = await getWorkspaceId();
+  const dashboardOverview = getDashboardOverview(workspaceId);
+  const recentTransactions = getRecentTransactions(workspaceId, 4);
+  const categoryById = new Map(listCategories(workspaceId, { includeArchived: true }).map((c) => [c.id, c]));
+  const savingsGoals = listGoals(workspaceId);
+  const upcomingBills = listBills(workspaceId);
+  const currency = getActiveCurrency(workspaceId);
+  const settings = getSettings(workspaceId);
+  const topBudget = getTopBudgetUsage(workspaceId);
   const budgetInsight = topBudget
-    ? `Spending on ${topBudget.category} is at ${Math.round(topBudget.percent)}% of budget!`
+    ? `Spending on ${topBudget.categoryName} is at ${Math.round(topBudget.percent)}% of budget!`
     : "No budget spending yet this month.";
   return (
     <>
@@ -104,7 +107,7 @@ export default function DashboardPage() {
           </div>
           <div className="space-y-4">
             {recentTransactions.map(tx => {
-              const meta = getCategoryMeta(tx.category);
+              const meta = categoryById.get(tx.categoryId) ?? { name: "Unknown category", icon: "help", color: "bg-surface-variant" };
               return (
               <div key={tx.id} className="flex items-center justify-between p-3 hover:bg-surface-container-low rounded-lg transition-colors group cursor-pointer">
                 <div className="flex items-center gap-4">
@@ -113,7 +116,7 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <p className="font-label-md">{tx.merchant}</p>
-                    <p className="font-caption text-on-surface-variant">{tx.category} • {formatShortDate(tx.date)}</p>
+                    <p className="font-caption text-on-surface-variant">{meta.name} • {formatShortDate(tx.date)}</p>
                   </div>
                 </div>
                 <div className="text-right">

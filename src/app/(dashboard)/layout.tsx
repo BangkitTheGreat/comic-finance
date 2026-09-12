@@ -5,6 +5,7 @@ import { processDueRecurring } from "@/lib/recurring/store";
 import { getCurrencyCode } from "@/lib/currency/store";
 import { getProfile } from "@/lib/profile/store";
 import { getSettings } from "@/lib/settings/store";
+import { getWorkspaceId } from "@/lib/workspace/context";
 
 export default async function DashboardLayout({
   children,
@@ -12,10 +13,11 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   await connection();
-  processDueRecurring();
-  const currency = getCurrencyCode();
-  const settings = getSettings();
-  const profile = getProfile();
+  const workspaceId = await getWorkspaceId();
+  processDueRecurring(workspaceId);
+  const currency = getCurrencyCode(workspaceId);
+  const settings = getSettings(workspaceId);
+  const profile = getProfile(workspaceId);
   return (
     <div className={`flex min-h-screen ${settings.reduceMotion ? "reduce-motion" : ""}`}>
       <Sidebar profile={profile} currency={currency} reduceMotion={settings.reduceMotion} />

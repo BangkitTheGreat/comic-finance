@@ -44,3 +44,6 @@ next-env.d.ts
 .claude
 .remember
 
+# persistent app data (sqlite db + WAL/SHM files)
+/.data
+

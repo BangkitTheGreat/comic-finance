@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ActionForm } from "@/components/ui/ActionForm";
 import { ComicButton } from "@/components/ui/ComicButton";
+import { ComicDialog } from "@/components/ui/ComicDialog";
 import { ACCOUNT_TYPES, type AccountWithBalance } from "@/lib/accounts/types";
 import { createAccount, editAccount } from "@/lib/accounts/actions";
 import { amountInputValue } from "@/lib/currency/input";
@@ -22,34 +23,13 @@ export function AccountFormModal({ open, onClose, editing, currency }: Props) {
   // (a credit card can open with existing debt) with no separate income/expense toggle.
   const displayedBalance = editing ? amountInputValue(editing.initialBalance, inputCurrency, { signed: true }) : "0";
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
 
-  if (!open) return null;
 
   const isEdit = editing !== null;
   const action = isEdit ? editAccount : createAccount;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-border-heavy/40 backdrop-blur-sm" onClick={onClose} />
-      <div role="dialog" aria-modal="true" aria-labelledby="account-modal-title" className="relative z-10 w-full max-w-md bg-surface border-2 border-border-heavy rounded-xl shadow-comic-heavy p-6 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h3 id="account-modal-title" className="font-headline-md text-ink">{isEdit ? "Edit Account" : "Link New Account"}</h3>
-          <button
-            onClick={onClose}
-            className="w-9 h-9 rounded-full border-2 border-border-heavy bg-surface-container-low flex items-center justify-center comic-interactive shadow-comic-sm"
-            aria-label="Close"
-          >
-            <span className="material-symbols-outlined text-[20px]">close</span>
-          </button>
-        </div>
+    <ComicDialog open={open} onClose={onClose} title={isEdit ? "Edit account" : "Link new account"}>
 
         <ActionForm
           action={action} onSuccess={onClose}
@@ -109,7 +89,6 @@ export function AccountFormModal({ open, onClose, editing, currency }: Props) {
             </ComicButton>
           </div>
         </ActionForm>
-      </div>
-    </div>
+    </ComicDialog>
   );
 }

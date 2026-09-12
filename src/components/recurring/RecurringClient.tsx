@@ -5,7 +5,7 @@ import { ActionForm } from "@/components/ui/ActionForm";
 import { ComicButton } from "@/components/ui/ComicButton";
 import { RecurringFormModal } from "./RecurringFormModal";
 import { deleteRecurring, toggleRecurring } from "@/lib/recurring/actions";
-import { getCategoryMeta } from "@/lib/transactions/types";
+import type { CategoryOption } from "@/lib/categories/types";
 import { formatMoney, formatMoneyAbs, type Currency } from "@/lib/currency/types";
 import type { Recurring } from "@/lib/recurring/types";
 import type { AccountOption } from "@/lib/accounts/types";
@@ -16,7 +16,8 @@ function formatDue(iso: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export function RecurringClient({ recurring, accounts, currency }: { recurring: Recurring[]; accounts: AccountOption[]; currency: Currency }) {
+export function RecurringClient({ recurring, accounts, categories, currency }: { recurring: Recurring[]; accounts: AccountOption[]; categories: CategoryOption[]; currency: Currency }) {
+  const categoryById = new Map(categories.map((c) => [c.id, c]));
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Recurring | null>(null);
 
@@ -52,7 +53,7 @@ export function RecurringClient({ recurring, accounts, currency }: { recurring: 
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {recurring.map((rec) => {
-            const meta = getCategoryMeta(rec.category);
+            const meta = categoryById.get(rec.categoryId) ?? { name: "Unknown category", icon: "help", color: "bg-surface-variant" };
             return (
               <div key={rec.id} className={`bg-surface border-2 border-border-heavy rounded-xl p-4 md:p-5 shadow-comic flex flex-col gap-4 ${rec.active ? "" : "opacity-60"}`}>
                 <div className="flex items-start justify-between">
@@ -96,7 +97,7 @@ export function RecurringClient({ recurring, accounts, currency }: { recurring: 
         </div>
       )}
 
-      <RecurringFormModal key={`${modalOpen}-${editing?.id ?? "new"}`} open={modalOpen} onClose={() => setModalOpen(false)} editing={editing} accounts={accounts} currency={currency} />
+      <RecurringFormModal categories={categories} key={`${modalOpen}-${editing?.id ?? "new"}`} open={modalOpen} onClose={() => setModalOpen(false)} editing={editing} accounts={accounts} currency={currency} />
     </>
   );
 }

@@ -1,113 +1,167 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-import { editBudgetLimit } from "./actions";
-import { listBudgetCategories } from "./store";
-import { CATEGORIES, CATEGORY_NAMES, getCategoryMeta } from "@/lib/transactions/types";
-import { getCategorySpending } from "@/lib/transactions/analytics";
-import { addTransaction } from "@/lib/transactions/store";
+vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => ({ value: "test-workspace" }) }) }));
+import { copyPreviousMonthBudgets, createBudget, deleteBudget, editBudget } from "./actions";
+import { addBudget, getBudget, listBudgets } from "./store";
+import { getCategoryByName } from "@/lib/categories/store";
+import { addAccount, getAccountsWithBalances } from "@/lib/accounts/store";
+import { addTransaction, listTransactions } from "@/lib/transactions/store";
+import { OTHER_TEST_WORKSPACE_ID as OTHER, resetWorkspaceForTest, TEST_WORKSPACE_ID as WS } from "@/lib/workspace/testing";
+
+const SEPT = "2026-09";
+const AUG = "2026-08";
+const cat = (name: string) => getCategoryByName(WS, name)!.id;
 
 function form(overrides: Record<string, string | undefined> = {}) {
   const data = new FormData();
-  for (const [key, value] of Object.entries({ currencyCode: "USD", id: "bc1", budget: "700", ...overrides })) {
+  for (const [key, value] of Object.entries({ currencyCode: "USD", categoryId: cat("Food & Dining"), month: SEPT, limit: "600", status: "active", ...overrides })) {
     if (value !== undefined) data.set(key, value);
   }
   return data;
 }
 
-const budgetOf = (id: string) => listBudgetCategories().find((c) => c.id === id)!.budget;
-
 beforeEach(() => {
-  for (const key of ["__budgetStore", "__txStore", "__accountStore", "__recurringStore"]) Reflect.deleteProperty(globalThis, key);
+  resetWorkspaceForTest();
+  resetWorkspaceForTest(OTHER);
   vi.clearAllMocks();
 });
 
-describe("budget category references", () => {
-  // The browser check caught what these assert: a budget whose category does
-  // not resolve renders the fallback icon and a blank name, and silently
-  // reports zero spent. Unit tests over the store alone never exercised the
-  // page's derivation, so nothing failed.
-  it("resolves every budget to a real category, never the fallback", () => {
-    for (const budget of listBudgetCategories()) {
-      expect(CATEGORY_NAMES).toContain(budget.category);
-      const meta = getCategoryMeta(budget.category);
-      expect(meta.name).toBe(budget.category);
-      expect(meta.icon).not.toBe("category"); // the DEFAULT_CATEGORY fallback icon
-    }
+describe("createBudget", () => {
+  it("creates a budget for a category and month", async () => {
+    expect(await createBudget(form())).toEqual({ ok: true });
+    expect(listBudgets(WS, SEPT)).toMatchObject([{ categoryId: cat("Food & Dining"), month: SEPT, limit: 600, status: "active" }]);
   });
 
-  it("matches spending on the same key the budget references", () => {
-    const budget = listBudgetCategories()[0];
-    addTransaction({
-      merchant: "Test", category: budget.category, accountId: "a1",
-      date: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-15`,
-      amount: -42,
-    });
-    expect(getCategorySpending().get(budget.category)).toBe(42);
+  it("allows one budget per category per month, never two", async () => {
+    expect(await createBudget(form())).toEqual({ ok: true });
+    const dup = await createBudget(form({ limit: "900" }));
+    expect(dup).toMatchObject({ ok: false, errors: { categoryId: expect.stringContaining("already has a budget") } });
+    expect(listBudgets(WS, SEPT)).toHaveLength(1);
+    expect(listBudgets(WS, SEPT)[0].limit).toBe(600);
+    // The same category in a different month is a separate budget.
+    expect(await createBudget(form({ month: AUG, limit: "400" }))).toEqual({ ok: true });
+    expect(listBudgets(WS, AUG)[0].limit).toBe(400);
   });
 
-  it("keeps every category name unique, so name-keyed spending can't collide", () => {
-    expect(new Set(CATEGORY_NAMES).size).toBe(CATEGORIES.length);
-  });
-});
-
-describe("editBudgetLimit", () => {
-  it.each(["-100", "NaN", "Infinity", "", " ", "1e309", "1000000000001"])(
-    "rejects invalid budget %s without mutating the store",
-    async (budget) => {
-      const before = budgetOf("bc1");
-      const result = await editBudgetLimit(form({ budget }));
-      expect(result.ok).toBe(false);
-      expect(budgetOf("bc1")).toBe(before);
+  it.each(["0", "-100", "NaN", "Infinity", "", " ", "1e309", "1000000000001", "0.001"])(
+    "rejects limit %s — a limit must be positive; pausing is a status, not zero",
+    async (limit) => {
+      expect((await createBudget(form({ limit }))).ok).toBe(false);
+      expect(listBudgets(WS, SEPT)).toEqual([]);
     }
   );
 
-  it("accepts zero (pausing a category's budget)", async () => {
-    const result = await editBudgetLimit(form({ budget: "0" }));
-    expect(result.ok).toBe(true);
-    expect(budgetOf("bc1")).toBe(0);
+  it.each(["2026-13", "2026-9", "bad", "", "2026-09-01"])("rejects invalid month %s", async (month) => {
+    expect(await createBudget(form({ month }))).toMatchObject({ ok: false, errors: { month: expect.any(String) } });
   });
 
-  it("updates the limit on a valid submission", async () => {
-    const result = await editBudgetLimit(form({ budget: "850.50" }));
-    expect(result.ok).toBe(true);
-    expect(budgetOf("bc1")).toBe(850.5);
+  it("rejects an unknown category and an invalid status", async () => {
+    expect(await createBudget(form({ categoryId: "missing" }))).toMatchObject({ ok: false, errors: { categoryId: expect.any(String) } });
+    expect(await createBudget(form({ status: "stopped" }))).toMatchObject({ ok: false, errors: { status: expect.any(String) } });
+    expect(listBudgets(WS, SEPT)).toEqual([]);
   });
 
-  it("reports not-found on an unknown category id, without throwing", async () => {
-    const result = await editBudgetLimit(form({ id: "missing" }));
-    expect(result).toEqual({ ok: false, errors: { form: "Budget category no longer exists." } });
+  it("converts a non-USD limit into the USD base", async () => {
+    expect(await createBudget(form({ currencyCode: "IDR", limit: "16000000" }))).toEqual({ ok: true });
+    expect(listBudgets(WS, SEPT)[0].limit).toBeCloseTo(1000, 8);
+  });
+});
+
+describe("editBudget", () => {
+  it("changes limit, category and status but never the month", async () => {
+    const b = addBudget(WS, { categoryId: cat("Food & Dining"), month: SEPT, limit: 600, status: "active" });
+    expect(await editBudget(form({ id: b.id, categoryId: cat("Groceries"), limit: "850.50", status: "paused", month: AUG }))).toEqual({ ok: true });
+    expect(getBudget(WS, b.id)).toMatchObject({ categoryId: cat("Groceries"), limit: 850.5, status: "paused", month: SEPT });
   });
 
-  it("does not mutate the seed object shared across categories", async () => {
-    const bc2Before = listBudgetCategories().find((c) => c.id === "bc2")!.budget;
-    await editBudgetLimit(form({ id: "bc1", budget: "999" }));
-    expect(listBudgetCategories().find((c) => c.id === "bc2")!.budget).toBe(bc2Before);
+  it("editing September leaves August's history untouched", async () => {
+    addBudget(WS, { categoryId: cat("Food & Dining"), month: AUG, limit: 400, status: "active" });
+    const sept = addBudget(WS, { categoryId: cat("Food & Dining"), month: SEPT, limit: 600, status: "active" });
+    expect(await editBudget(form({ id: sept.id, limit: "900" }))).toEqual({ ok: true });
+    expect(listBudgets(WS, AUG)[0].limit).toBe(400);
+    expect(listBudgets(WS, SEPT)[0].limit).toBe(900);
   });
 
-  it("converts a non-USD submission into the USD base", async () => {
-    expect(await editBudgetLimit(form({ currencyCode: "IDR", budget: "16000000" }))).toEqual({ ok: true });
-    expect(budgetOf("bc1")).toBeCloseTo(1000, 8); // 16,000,000 IDR / 16000 rate
+  it("refuses to move a budget onto a category that already has one that month", async () => {
+    addBudget(WS, { categoryId: cat("Groceries"), month: SEPT, limit: 300, status: "active" });
+    const food = addBudget(WS, { categoryId: cat("Food & Dining"), month: SEPT, limit: 600, status: "active" });
+    const result = await editBudget(form({ id: food.id, categoryId: cat("Groceries") }));
+    expect(result).toMatchObject({ ok: false, errors: { categoryId: expect.stringContaining("already has a budget") } });
+    expect(getBudget(WS, food.id)?.categoryId).toBe(cat("Food & Dining"));
   });
 
-  it("rejects a negative amount even though the shared helper allows non-positive values", async () => {
-    const result = await editBudgetLimit(form({ budget: "-50" }));
-    expect(result).toEqual({ ok: false, errors: { budget: "Budget limit cannot be negative." } });
-    expect(budgetOf("bc1")).toBe(600);
+  it.each(["0", "-50", "abc"])("rejects invalid limit %s without mutating", async (limit) => {
+    const b = addBudget(WS, { categoryId: cat("Food & Dining"), month: SEPT, limit: 600, status: "active" });
+    expect((await editBudget(form({ id: b.id, limit }))).ok).toBe(false);
+    expect(getBudget(WS, b.id)?.limit).toBe(600);
   });
 
-  it("rejects a negative amount in a non-USD currency too", async () => {
-    const result = await editBudgetLimit(form({ currencyCode: "EUR", budget: "-50" }));
-    expect(result.ok).toBe(false);
-    expect(budgetOf("bc1")).toBe(600);
+  it("reports not-found on an unknown id", async () => {
+    expect(await editBudget(form({ id: "missing" }))).toEqual({ ok: false, errors: { form: "Budget no longer exists." } });
   });
 
   it("preserves the exact base value on an unchanged display across currency switches", async () => {
-    // bc1 seeds at 600 USD base. Editing in EUR at the exact displayed
-    // conversion should round-trip without FX drift, same guarantee
-    // transactions/recurring already have.
-    const before = budgetOf("bc1");
-    const eurDisplay = (before * 0.92).toFixed(2);
-    expect(await editBudgetLimit(form({ currencyCode: "EUR", budget: eurDisplay }))).toEqual({ ok: true });
-    expect(budgetOf("bc1")).toBe(before);
+    const b = addBudget(WS, { categoryId: cat("Food & Dining"), month: SEPT, limit: 600, status: "active" });
+    expect(await editBudget(form({ id: b.id, currencyCode: "EUR", limit: (600 * 0.92).toFixed(2) }))).toEqual({ ok: true });
+    expect(getBudget(WS, b.id)?.limit).toBe(600);
+  });
+});
+
+describe("deleteBudget", () => {
+  it("removes only the allocation; transactions and balances stay", async () => {
+    const account = addAccount(WS, { name: "Main", type: "checking", initialBalance: 1000, color: "" });
+    addTransaction(WS, { merchant: "Diner", categoryId: cat("Food & Dining"), accountId: account.id, date: "2026-09-05", amount: -40 });
+    const b = addBudget(WS, { categoryId: cat("Food & Dining"), month: SEPT, limit: 600, status: "active" });
+    const balanceBefore = getAccountsWithBalances(WS)[0].balance;
+
+    expect(await deleteBudget(form({ id: b.id }))).toEqual({ ok: true });
+
+    expect(listBudgets(WS, SEPT)).toEqual([]);
+    expect(listTransactions(WS)).toHaveLength(1);
+    expect(getAccountsWithBalances(WS)[0].balance).toBe(balanceBefore);
+  });
+
+  it("reports not-found on an unknown id", async () => {
+    expect((await deleteBudget(form({ id: "missing" }))).ok).toBe(false);
+  });
+});
+
+describe("copyPreviousMonthBudgets", () => {
+  it("copies last month's budgets that are missing this month, atomically", async () => {
+    addBudget(WS, { categoryId: cat("Food & Dining"), month: AUG, limit: 400, status: "active" });
+    addBudget(WS, { categoryId: cat("Transport"), month: AUG, limit: 200, status: "paused" });
+    addBudget(WS, { categoryId: cat("Food & Dining"), month: SEPT, limit: 999, status: "active" });
+
+    expect(await copyPreviousMonthBudgets(form({ month: SEPT }))).toEqual({ ok: true });
+
+    const sept = listBudgets(WS, SEPT);
+    expect(sept).toHaveLength(2);
+    expect(sept.find((b) => b.categoryId === cat("Food & Dining"))?.limit).toBe(999); // existing one kept
+    expect(sept.find((b) => b.categoryId === cat("Transport"))).toMatchObject({ limit: 200, status: "paused" });
+    expect(listBudgets(WS, AUG)).toHaveLength(2); // source untouched
+  });
+
+  it("explains when there is nothing to copy", async () => {
+    expect(await copyPreviousMonthBudgets(form({ month: SEPT }))).toMatchObject({ ok: false, errors: { form: expect.stringContaining("no budgets in August 2026") } });
+    addBudget(WS, { categoryId: cat("Food & Dining"), month: AUG, limit: 400, status: "active" });
+    addBudget(WS, { categoryId: cat("Food & Dining"), month: SEPT, limit: 600, status: "active" });
+    expect(await copyPreviousMonthBudgets(form({ month: SEPT }))).toMatchObject({ ok: false, errors: { form: expect.stringContaining("already exists") } });
+    expect(listBudgets(WS, SEPT)).toHaveLength(1);
+  });
+});
+
+describe("workspace isolation", () => {
+  it("cannot edit, delete or copy another workspace's budgets", async () => {
+    const otherCategory = getCategoryByName(OTHER, "Food & Dining")!.id;
+    const theirs = addBudget(OTHER, { categoryId: otherCategory, month: SEPT, limit: 123, status: "active" });
+    addBudget(OTHER, { categoryId: otherCategory, month: AUG, limit: 50, status: "active" });
+
+    expect((await deleteBudget(form({ id: theirs.id }))).ok).toBe(false);
+    expect((await editBudget(form({ id: theirs.id, limit: "1" }))).ok).toBe(false);
+    expect((await copyPreviousMonthBudgets(form({ month: SEPT }))).ok).toBe(false); // nothing of ours in August
+
+    expect(getBudget(OTHER, theirs.id)?.limit).toBe(123);
+    expect(listBudgets(OTHER, SEPT)).toHaveLength(1);
+    expect(listBudgets(WS, SEPT)).toEqual([]);
   });
 });

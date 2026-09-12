@@ -1,13 +1,15 @@
 import { getStatsForRange } from "@/lib/transactions/analytics";
 import { getActiveCurrency } from "@/lib/currency/store";
 import { StatisticsClient } from "@/components/statistics/StatisticsClient";
+import { getWorkspaceId } from "@/lib/workspace/context";
 
-export default function StatisticsPage() {
+export default async function StatisticsPage() {
+  const workspaceId = await getWorkspaceId();
   const ranges = {
-    month: getStatsForRange("month"),
-    quarter: getStatsForRange("quarter"),
-    year: getStatsForRange("year"),
+    month: getStatsForRange(workspaceId, "month"),
+    quarter: getStatsForRange(workspaceId, "quarter"),
+    year: getStatsForRange(workspaceId, "year"),
   };
-  const currency = getActiveCurrency();
+  const currency = getActiveCurrency(workspaceId);
   return <StatisticsClient ranges={ranges} currency={currency} />;
 }

@@ -8,6 +8,7 @@ import { currencyAmountField } from "@/lib/currency/amount";
 import { revalidateFinancialPages } from "@/lib/financial-cache";
 import { reassignTransactions } from "@/lib/transactions/store";
 import { reassignRecurring } from "@/lib/recurring/store";
+import { getWorkspaceId } from "@/lib/workspace/context";
 
 function buildData(form: FormData, existingBase?: number) {
   const type = enumField(form, "type", ACCOUNT_TYPES.map(t => t.type));
@@ -21,21 +22,24 @@ function buildData(form: FormData, existingBase?: number) {
   };
 }
 export async function createAccount(form: FormData) {
-  return runMutation(() => { addAccount(buildData(form)); revalidateFinancialPages(); });
+  const workspaceId = await getWorkspaceId();
+  return runMutation(() => { addAccount(workspaceId, buildData(form)); revalidateFinancialPages(); });
 }
 export async function editAccount(form: FormData) {
+  const workspaceId = await getWorkspaceId();
   return runMutation(() => {
     const id = textField(form, "id");
-    const existing = getAccount(id);
+    const existing = getAccount(workspaceId, id);
     if (!existing) throw new ValidationError("Account no longer exists.");
-    updateAccount(id, buildData(form, existing.initialBalance));
+    updateAccount(workspaceId, id, buildData(form, existing.initialBalance));
     revalidateFinancialPages();
   });
 }
 export async function deleteAccount(form: FormData) {
+  const workspaceId = await getWorkspaceId();
   return runMutation(() => {
     const id = textField(form, "id");
-    if (!getAccount(id)) throw new ValidationError("Account no longer exists.");
+    if (!getAccount(workspaceId, id)) throw new ValidationError("Account no longer exists.");
 
     // Optional escape hatch for an account that still has records: move them
     // to another account first, which is exactly what removeAccount's own
@@ -43,12 +47,12 @@ export async function deleteAccount(form: FormData) {
     const moveToAccountId = textField(form, "moveToAccountId", false);
     if (moveToAccountId) {
       if (moveToAccountId === id) throw new ValidationError("Choose a different account to move records to.", "moveToAccountId");
-      if (!getAccount(moveToAccountId)) throw new ValidationError("The account to move records to does not exist.", "moveToAccountId");
-      reassignTransactions(id, moveToAccountId);
-      reassignRecurring(id, moveToAccountId);
+      if (!getAccount(workspaceId, moveToAccountId)) throw new ValidationError("The account to move records to does not exist.", "moveToAccountId");
+      reassignTransactions(workspaceId, id, moveToAccountId);
+      reassignRecurring(workspaceId, id, moveToAccountId);
     }
 
-    if (!removeAccount(id)) throw new ValidationError("Account no longer exists.");
+    if (!removeAccount(workspaceId, id)) throw new ValidationError("Account no longer exists.");
     revalidateFinancialPages();
   });
 }

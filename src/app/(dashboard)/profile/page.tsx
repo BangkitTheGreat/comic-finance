@@ -1,16 +1,21 @@
 import { getProfile } from "@/lib/profile/store";
 import { ProfileCard } from "@/components/profile/ProfileCard";
-import { ResetDemoPanel } from "@/components/profile/ResetDemoPanel";
+import { DataWorkspacePanel } from "@/components/profile/DataWorkspacePanel";
 import { getCurrencyCode } from "@/lib/currency/store";
 import { CurrencySwitcher } from "@/components/currency/CurrencySwitcher";
 import { getSettings } from "@/lib/settings/store";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
+import { getWorkspaceId } from "@/lib/workspace/context";
+import { getWorkspaceStatus, getWorkspaceCounts } from "@/lib/workspace/store";
 import styles from "@/components/profile/profile.module.css";
 
-export default function ProfilePage() {
-  const profile = getProfile();
-  const currency = getCurrencyCode();
-  const settings = getSettings();
+export default async function ProfilePage() {
+  const workspaceId = await getWorkspaceId();
+  const profile = getProfile(workspaceId);
+  const currency = getCurrencyCode(workspaceId);
+  const settings = getSettings(workspaceId);
+  const status = getWorkspaceStatus(workspaceId);
+  const counts = getWorkspaceCounts(workspaceId);
   return <div className={styles.page}>
     <header className="mb-8">
       <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">Profile & settings</h1>
@@ -21,8 +26,8 @@ export default function ProfilePage() {
         <ProfileCard profile={profile} />
         <aside className={styles.demoNote} aria-labelledby="demo-heading">
           <span aria-hidden="true" className="material-symbols-outlined text-2xl">info</span>
-          <div className="min-w-0"><h2 id="demo-heading" className="text-base font-bold text-ink">Demo workspace</h2>
-            <p className="mt-2 text-sm leading-relaxed text-ink">Explore with sample data. This demo is shared, and changes may reset when the app restarts. Use sample details rather than personal information.</p>
+          <div className="min-w-0"><h2 id="demo-heading" className="text-base font-bold text-ink">Private to this browser</h2>
+            <p className="mt-2 text-sm leading-relaxed text-ink">Your data is saved on this server and tied to this browser, not to a verified account. It survives reloads and restarts, but a cleared browser cookie or a different device starts a new, empty workspace.</p>
           </div>
         </aside>
       </div>
@@ -37,7 +42,7 @@ export default function ProfilePage() {
         </section>
         <SettingsPanel settings={settings} />
       </div>
-      <div className="lg:col-span-2"><ResetDemoPanel /></div>
+      <div className="lg:col-span-2"><DataWorkspacePanel status={status} counts={counts} /></div>
     </div>
   </div>;
 }

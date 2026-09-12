@@ -3,7 +3,8 @@ export type TransactionType = "income" | "expense";
 export interface Transaction {
   id: string;
   merchant: string;
-  category: CategoryName;
+  /** References a row in the workspace's `categories` table, never a name. */
+  categoryId: string;
   accountId: string;
   date: string;
   amount: number;
@@ -16,10 +17,11 @@ export interface CategoryMeta {
   readonly color: string;
 }
 
-// The single source of truth for categories. `as const` makes the names a
-// literal union (CategoryName), so anything referencing a category — a
-// transaction, a recurring rule, a budget — fails to compile on a typo
-// instead of silently matching nothing at runtime.
+// The default categories every new workspace is seeded with. Since Part 4
+// these are only the *starting set*: the live list lives in the `categories`
+// table per workspace, and transactions, recurring rules and budgets all
+// point at a category id. Kept here so seeding and the migration share one
+// definition of the defaults.
 export const CATEGORIES = [
   { name: "Food & Dining", icon: "restaurant", color: "bg-pop-pink" },
   { name: "Salary", icon: "payments", color: "bg-secondary-container" },

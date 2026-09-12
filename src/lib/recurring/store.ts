@@ -3,102 +3,111 @@ import { advanceDate, isDue } from "./types";
 import { addTransaction } from "@/lib/transactions/store";
 import { getAccount } from "@/lib/accounts/store";
 import { isPositiveAmount, isValidIsoDate } from "@/lib/validation";
-import { CATEGORIES } from "@/lib/transactions/types";
+import { getCategory } from "@/lib/categories/store";
 import { FREQUENCIES } from "./types";
-import { isoOffsetDays as isoOffset } from "@/lib/dates";
+import { getDb, nextId } from "@/lib/db/client";
 
-const seed: Recurring[] = [
-  { id: "r1", merchant: "Netflix", category: "Entertainment", accountId: "a1", type: "expense", amount: 15.99, frequency: "monthly", nextDue: isoOffset(6), active: true },
-  { id: "r2", merchant: "Tech Corp Inc.", category: "Salary", accountId: "a1", type: "income", amount: 4250, frequency: "monthly", nextDue: isoOffset(19), active: true },
-  { id: "r3", merchant: "Gym Membership", category: "Health", accountId: "a1", type: "expense", amount: 29.99, frequency: "monthly", nextDue: isoOffset(2), active: true },
-];
-
-interface Store {
-  items: Recurring[];
-  counter: number;
+interface RecurringRow {
+  id: string;
+  merchant: string;
+  category_id: string;
+  account_id: string;
+  type: "income" | "expense";
+  amount: number;
+  frequency: Recurring["frequency"];
+  next_due: string;
+  active: number;
 }
 
-const globalForStore = globalThis as unknown as { __recurringStore?: Store };
-
-function getStore(): Store {
-  if (!globalForStore.__recurringStore) {
-    globalForStore.__recurringStore = { items: seed.map((r) => ({ ...r })), counter: seed.length };
-  }
-  return globalForStore.__recurringStore;
+function toRecurring(row: RecurringRow): Recurring {
+  return {
+    id: row.id,
+    merchant: row.merchant,
+    categoryId: row.category_id,
+    accountId: row.account_id,
+    type: row.type,
+    amount: row.amount,
+    frequency: row.frequency,
+    nextDue: row.next_due,
+    active: Boolean(row.active),
+  };
 }
 
-export function listRecurring(): Recurring[] {
-  return [...getStore().items].sort((a, b) => a.nextDue.localeCompare(b.nextDue));
+export function listRecurring(workspaceId: string): Recurring[] {
+  const rows = getDb()
+    .prepare("SELECT * FROM recurring WHERE workspace_id = ? ORDER BY next_due")
+    .all(workspaceId) as unknown as RecurringRow[];
+  return rows.map(toRecurring);
 }
 
-export function recurringCountsByAccount(): Map<string, number> {
+export function recurringCountsByAccount(workspaceId: string): Map<string, number> {
   const counts = new Map<string, number>();
-  for (const rec of getStore().items) counts.set(rec.accountId, (counts.get(rec.accountId) ?? 0) + 1);
+  for (const rec of listRecurring(workspaceId)) counts.set(rec.accountId, (counts.get(rec.accountId) ?? 0) + 1);
   return counts;
 }
 
 /** Repoints every recurring rule on `fromId` at `toId`. Returns how many moved. */
-export function reassignRecurring(fromId: string, toId: string): number {
-  const store = getStore();
-  let moved = 0;
-  store.items = store.items.map((rec) => {
-    if (rec.accountId !== fromId) return rec;
-    moved += 1;
-    return { ...rec, accountId: toId };
-  });
-  return moved;
+export function reassignRecurring(workspaceId: string, fromId: string, toId: string): number {
+  const { changes } = getDb()
+    .prepare("UPDATE recurring SET account_id = ? WHERE workspace_id = ? AND account_id = ?")
+    .run(toId, workspaceId, fromId);
+  return Number(changes);
 }
 
-export function getRecurring(id: string): Recurring | undefined {
-  return getStore().items.find((r) => r.id === id);
+export function getRecurring(workspaceId: string, id: string): Recurring | undefined {
+  const row = getDb().prepare("SELECT * FROM recurring WHERE workspace_id = ? AND id = ?").get(workspaceId, id) as RecurringRow | undefined;
+  return row ? toRecurring(row) : undefined;
 }
 
-export function addRecurring(data: Omit<Recurring, "id">): Recurring {
-  const store = getStore();
-  store.counter += 1;
-  const rec: Recurring = { ...data, id: `r${store.counter}` };
-  store.items.push(rec);
-  return rec;
+export function addRecurring(workspaceId: string, data: Omit<Recurring, "id">): Recurring {
+  const id = nextId(workspaceId, "recurring", "r");
+  getDb()
+    .prepare(
+      "INSERT INTO recurring (id, workspace_id, merchant, category_id, account_id, type, amount, frequency, next_due, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    )
+    .run(id, workspaceId, data.merchant, data.categoryId, data.accountId, data.type, data.amount, data.frequency, data.nextDue, Number(data.active));
+  return { id, ...data };
 }
 
-export function updateRecurring(id: string, data: Partial<Omit<Recurring, "id">>): Recurring | undefined {
-  const store = getStore();
-  const idx = store.items.findIndex((r) => r.id === id);
-  if (idx === -1) return undefined;
-  const updated = { ...store.items[idx], ...data };
-  store.items[idx] = updated;
+export function updateRecurring(workspaceId: string, id: string, data: Partial<Omit<Recurring, "id">>): Recurring | undefined {
+  const existing = getRecurring(workspaceId, id);
+  if (!existing) return undefined;
+  const updated = { ...existing, ...data };
+  getDb()
+    .prepare(
+      "UPDATE recurring SET merchant = ?, category_id = ?, account_id = ?, type = ?, amount = ?, frequency = ?, next_due = ?, active = ? WHERE workspace_id = ? AND id = ?"
+    )
+    .run(updated.merchant, updated.categoryId, updated.accountId, updated.type, updated.amount, updated.frequency, updated.nextDue, Number(updated.active), workspaceId, id);
   return updated;
 }
 
-export function removeRecurring(id: string): boolean {
-  const store = getStore();
-  const idx = store.items.findIndex((r) => r.id === id);
-  if (idx === -1) return false;
-  store.items.splice(idx, 1);
-  return true;
+export function removeRecurring(workspaceId: string, id: string): boolean {
+  const { changes } = getDb().prepare("DELETE FROM recurring WHERE workspace_id = ? AND id = ?").run(workspaceId, id);
+  return Number(changes) > 0;
 }
 
-export function processDueRecurring(): number {
-  const store = getStore();
+export function processDueRecurring(workspaceId: string): number {
   let posted = 0;
-  for (const rec of store.items) {
-    if (!rec.active || !getAccount(rec.accountId) || !isPositiveAmount(rec.amount) ||
+  for (const rec of listRecurring(workspaceId)) {
+    if (!rec.active || !getAccount(workspaceId, rec.accountId) || !isPositiveAmount(rec.amount) ||
       !isValidIsoDate(rec.nextDue) || !["income", "expense"].includes(rec.type) ||
-      !FREQUENCIES.some(f => f.value === rec.frequency) || !CATEGORIES.some(c => c.name === rec.category)) continue;
+      !FREQUENCIES.some(f => f.value === rec.frequency) || !getCategory(workspaceId, rec.categoryId)) continue;
+    let nextDue = rec.nextDue;
     let guard = 0;
-    while (isDue(rec.nextDue) && guard < 60) {
-      addTransaction({
+    while (isDue(nextDue) && guard < 60) {
+      addTransaction(workspaceId, {
         merchant: rec.merchant,
-        category: rec.category,
+        categoryId: rec.categoryId,
         accountId: rec.accountId,
-        date: rec.nextDue,
+        date: nextDue,
         amount: rec.type === "income" ? Math.abs(rec.amount) : -Math.abs(rec.amount),
         note: "Recurring",
       });
-      rec.nextDue = advanceDate(rec.nextDue, rec.frequency);
+      nextDue = advanceDate(nextDue, rec.frequency);
       posted += 1;
       guard += 1;
     }
+    if (nextDue !== rec.nextDue) updateRecurring(workspaceId, rec.id, { nextDue });
   }
   return posted;
 }
