@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { userProfile } from "@/lib/mockData";
+import type { UserProfile } from "@/lib/profile/store";
+import { Avatar } from "@/components/profile/Avatar";
 import { GooeyText } from "@/components/ui/gooey-text-morphing";
 import { CurrencySwitcher } from "@/components/currency/CurrencySwitcher";
 import type { CurrencyCode } from "@/lib/currency/types";
 
-export function Sidebar({ currency, reduceMotion = false }: { currency: CurrencyCode; reduceMotion?: boolean }) {
+export function Sidebar({ profile, currency, reduceMotion = false }: { profile: UserProfile; currency: CurrencyCode; reduceMotion?: boolean }) {
   const pathname = usePathname();
 
   const navItems = [
@@ -68,10 +69,9 @@ export function Sidebar({ currency, reduceMotion = false }: { currency: Currency
           <CurrencySwitcher current={currency} variant="sidebar" />
         </div>
         <Link href="/profile" className="flex items-center gap-3 px-2 py-1.5 rounded-lg border-2 border-transparent hover:bg-surface-container-high hover:border-border-heavy hover:-translate-x-[1.5px] hover:-translate-y-[1.5px] hover:shadow-comic-sm transition-all duration-100 group">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={userProfile.avatar} alt="User avatar" className="w-9 h-9 rounded-full border-2 border-border-heavy shadow-comic-sm group-hover:shadow-comic-sm transition-all" />
-          <div className="flex flex-col">
-            <span className="font-label-md text-on-surface group-hover:text-primary transition-colors leading-tight">{userProfile.name}</span>
+          <Avatar name={profile.name} />
+          <div className="flex min-w-0 flex-col">
+            <span className="font-label-md truncate text-on-surface group-hover:text-primary transition-colors leading-tight" title={profile.name}>{profile.name}</span>
             <span className="font-caption text-on-surface-variant leading-tight">View Profile</span>
           </div>
         </Link>
@@ -79,7 +79,7 @@ export function Sidebar({ currency, reduceMotion = false }: { currency: Currency
           <div className="w-9 flex items-center justify-center">
             <span className="material-symbols-outlined text-[20px] group-hover:text-on-error-container">logout</span>
           </div>
-          <span className="font-label-md group-hover:text-on-error-container transition-colors">Sign out</span>
+          <span className="font-label-md group-hover:text-on-error-container transition-colors">Leave demo</span>
         </Link>
       </div>
     </nav>

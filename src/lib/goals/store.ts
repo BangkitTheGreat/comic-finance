@@ -14,7 +14,7 @@ const globalForStore = globalThis as unknown as { __goalStore?: Store };
 
 function getStore(): Store {
   if (!globalForStore.__goalStore) {
-    globalForStore.__goalStore = { items: [...seed], counter: seed.length };
+    globalForStore.__goalStore = { items: seed.map(item => ({ ...item })), counter: seed.length };
   }
   return globalForStore.__goalStore;
 }

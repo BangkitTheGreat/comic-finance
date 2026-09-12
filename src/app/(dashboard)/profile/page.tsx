@@ -1,83 +1,43 @@
-import { ComicCard } from "@/components/ui/ComicCard";
 import { getProfile } from "@/lib/profile/store";
 import { ProfileCard } from "@/components/profile/ProfileCard";
-import { deleteAccountData } from "@/lib/profile/actions";
+import { ResetDemoPanel } from "@/components/profile/ResetDemoPanel";
 import { getCurrencyCode } from "@/lib/currency/store";
 import { CurrencySwitcher } from "@/components/currency/CurrencySwitcher";
 import { getSettings } from "@/lib/settings/store";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
+import styles from "@/components/profile/profile.module.css";
 
 export default function ProfilePage() {
-  const userProfile = getProfile();
+  const profile = getProfile();
   const currency = getCurrencyCode();
   const settings = getSettings();
-  return (
-    <>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="font-headline-lg text-on-surface">My Profile</h1>
+  return <div className={styles.page}>
+    <header className="mb-8">
+      <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">Profile & settings</h1>
+      <p className="mt-3 max-w-prose text-base leading-relaxed text-on-surface-variant">Your identity, your preferences, your way to track money.</p>
+    </header>
+    <div className={styles.layout}>
+      <div className="min-w-0 space-y-6">
+        <ProfileCard profile={profile} />
+        <aside className={styles.demoNote} aria-labelledby="demo-heading">
+          <span aria-hidden="true" className="material-symbols-outlined text-2xl">info</span>
+          <div className="min-w-0"><h2 id="demo-heading" className="text-base font-bold text-ink">Demo workspace</h2>
+            <p className="mt-2 text-sm leading-relaxed text-ink">Explore with sample data. This demo is shared, and changes may reset when the app restarts. Use sample details rather than personal information.</p>
+          </div>
+        </aside>
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Profile Info */}
-        <div className="col-span-1 lg:col-span-4 flex flex-col gap-6">
-          <ProfileCard profile={userProfile} />
-
-          <ComicCard>
-            <h3 className="font-headline-md mb-4 flex items-center gap-2">
-              <span className="material-symbols-outlined text-secondary">verified_user</span>
-              Account Status
-            </h3>
-            <div className="flex items-center justify-between p-3 bg-surface-container-low border-2 border-border-heavy rounded-lg">
-              <div>
-                <p className="font-label-md">Pro Member</p>
-                <p className="font-caption text-on-surface-variant">Active until Dec 2026</p>
-              </div>
-              <span className="material-symbols-outlined text-secondary text-3xl">workspace_premium</span>
-            </div>
-          </ComicCard>
-        </div>
-
-        {/* Settings & Details */}
-        <div className="col-span-1 lg:col-span-8 flex flex-col gap-6">
-          <ComicCard>
-            <h3 className="font-headline-md mb-6">General Settings</h3>
-            
-            <div className="space-y-4">
-              <SettingsPanel settings={settings} />
-
-              <div className="flex items-center justify-between p-4 border-2 border-border-heavy rounded-lg gap-4">
-                <div className="flex items-center gap-4 flex-shrink-0">
-                  <div className="w-10 h-10 bg-secondary-container rounded-full border-2 border-border-heavy flex items-center justify-center">
-                    <span className="material-symbols-outlined text-on-secondary-container">paid</span>
-                  </div>
-                  <div>
-                    <h4 className="font-label-md text-on-surface">Currency</h4>
-                    <p className="font-caption text-on-surface-variant">Display all amounts in this currency</p>
-                  </div>
-                </div>
-                <div className="w-40">
-                  <CurrencySwitcher current={currency} variant="settings" />
-                </div>
-              </div>
-            </div>
-          </ComicCard>
-
-          <ComicCard>
-            <h3 className="font-headline-md mb-4 text-danger flex items-center gap-2">
-              <span className="material-symbols-outlined">warning</span>
-              Danger Zone
-            </h3>
-            <p className="font-body-md text-on-surface-variant mb-4">
-              Permanently delete your account and all of your content.
-            </p>
-            <form action={deleteAccountData}>
-              <button type="submit" className="py-2 px-4 bg-error-container text-on-error-container font-label-md rounded-lg border-2 border-danger shadow-[2px_2px_0px_0px_#EB5757] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_#EB5757] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all">
-                Delete Account
-              </button>
-            </form>
-          </ComicCard>
-        </div>
+      <div className={`${styles.panel} min-w-0`}>
+        <section className={styles.settingsSection} aria-labelledby="preferences-heading">
+          <h2 id="preferences-heading" className={styles.sectionTitle}>Preferences</h2>
+          <p className="mt-1 text-sm text-on-surface-variant">Choose how your money is displayed.</p>
+          <div className={styles.currencyRow}>
+            <div className="min-w-0"><h3 className="text-base font-semibold text-ink">Display currency</h3><p className="mt-1 max-w-sm text-sm leading-relaxed text-on-surface-variant">Change the view without changing your balances.</p></div>
+            <div className={styles.currencyControl}><CurrencySwitcher current={currency} variant="settings" /></div>
+          </div>
+        </section>
+        <SettingsPanel settings={settings} />
       </div>
-    </>
-  );
+      <div className="lg:col-span-2"><ResetDemoPanel /></div>
+    </div>
+  </div>;
 }

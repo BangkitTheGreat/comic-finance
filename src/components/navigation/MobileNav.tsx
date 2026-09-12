@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { UserProfile } from "@/lib/profile/store";
+import { Avatar } from "@/components/profile/Avatar";
 
-export function MobileNav() {
+export function MobileNav({ profile }: { profile: UserProfile }) {
   const pathname = usePathname();
 
   const navItems = [
@@ -18,11 +20,8 @@ export function MobileNav() {
       <header className="md:hidden fixed top-0 w-full z-40 bg-surface border-b-2 border-border-heavy shadow-[4px_4px_0px_0px_rgba(17,24,39,0.1)] flex justify-between items-center px-margin-mobile h-16">
         <div className="font-headline-md font-bold text-on-background tracking-tight">PennyComic</div>
         <div className="flex gap-4">
-          <button className="hover:translate-x-[2px] hover:translate-y-[2px] active:translate-x-[4px] active:translate-y-[4px] transition-all">
-            <span className="material-symbols-outlined">notifications</span>
-          </button>
-          <Link href="/login" className="hover:translate-x-[2px] hover:translate-y-[2px] active:translate-x-[4px] active:translate-y-[4px] transition-all border-2 border-border-heavy rounded-full p-1 bg-pop-pink text-white">
-            <span className="material-symbols-outlined icon-fill">person</span>
+          <Link href="/profile" aria-label={`Open profile for ${profile.name}`} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+            <Avatar name={profile.name} />
           </Link>
         </div>
       </header>

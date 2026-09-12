@@ -1,13 +1,11 @@
 export interface UserProfile {
   name: string;
   email: string;
-  avatar: string;
 }
 
 const defaultProfile: UserProfile = {
   name: "Penny User",
   email: "penny@example.com",
-  avatar: "https://ui-avatars.com/api/?name=Penny+User&background=BB6BD9&color=fff",
 };
 
 interface Store {
@@ -23,18 +21,14 @@ function getStore(): Store {
   return globalForStore.__profileStore;
 }
 
-function avatarFor(name: string): string {
-  const safe = encodeURIComponent(name.trim() || "User");
-  return `https://ui-avatars.com/api/?name=${safe}&background=BB6BD9&color=fff`;
-}
-
 export function getProfile(): UserProfile {
-  return getStore().profile;
+  const { name, email } = getStore().profile;
+  return { name, email };
 }
 
 export function updateProfile(name: string, email: string): UserProfile {
   const store = getStore();
-  store.profile = { name, email, avatar: avatarFor(name) };
+  store.profile = { name, email };
   return store.profile;
 }
 
