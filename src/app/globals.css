@@ -1,4 +1,9 @@
-@import "tailwindcss";
+/* source("../") pins class scanning to src/ — relative to this file.
+   Without it, Tailwind v4's automatic source detection walks outside the
+   project (this project sits under a home directory that is itself a git
+   repo with its own package-lock.json) and never finishes scanning, which
+   hangs every `next dev` / `next build` at "Compiling /". */
+@import "tailwindcss" source("../");
 
 @plugin "tailwindcss-animate";
 
