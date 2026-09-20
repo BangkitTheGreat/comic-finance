@@ -12,7 +12,7 @@ export async function editProfile(form: FormData) {
     const name = textField(form, "name");
     const email = textField(form, "email");
     if (name.length > 80 || /[\r\n\t]/.test(name)) throw new ValidationError("Use a name of 80 characters or fewer, on one line.", "name");
-    if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new ValidationError("Enter a valid email address, such as penny@example.com.", "email");
+    if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new ValidationError("Enter a valid email address, such as user@comicfinance.example.", "email");
     updateProfile(workspaceId, name, email);
     revalidatePath("/", "layout");
   });

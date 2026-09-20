@@ -3,7 +3,7 @@ import type { WorkspaceCounts, WorkspaceStatus } from "./types";
 import { DEFAULT_SETTINGS } from "@/lib/settings/types";
 import { ensureBuiltinCategories } from "@/lib/categories/store";
 
-const DEFAULT_PROFILE = { name: "Penny User", email: "penny@example.com" };
+const DEFAULT_PROFILE = { name: "Comic Finance User", email: "user@comicfinance.example" };
 const DEFAULT_CURRENCY_CODE = "USD";
 
 /**

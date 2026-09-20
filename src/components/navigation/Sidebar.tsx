@@ -25,7 +25,7 @@ export function Sidebar({ profile, currency, reduceMotion = false }: { profile: 
   return (
     <nav className="hidden md:flex flex-col p-panel-padding gap-unit fixed left-0 top-0 h-full w-[280px] z-50 border-r-2 border-border-heavy shadow-[4px_0px_0px_0px_rgba(17,24,39,0.1)] bg-surface">
       <div className="mb-8 mt-2 px-2">
-        <h1 className="font-headline-lg font-black text-on-surface tracking-tighter leading-none">PennyComic</h1>
+        <h1 className="font-headline-lg font-black text-on-surface tracking-tighter leading-none">Comic Finance</h1>
         {reduceMotion ? (
           <p className="h-4 w-full mt-1 font-caption text-on-surface-variant font-semibold uppercase tracking-widest">Personal Finance</p>
         ) : (

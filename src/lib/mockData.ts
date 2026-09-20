@@ -1,7 +1,7 @@
 export const userProfile = {
-  name: "Penny User",
-  email: "penny@example.com",
-  avatar: "https://ui-avatars.com/api/?name=Penny+User&background=BB6BD9&color=fff",
+  name: "Comic Finance User",
+  email: "user@comicfinance.example",
+  avatar: "https://ui-avatars.com/api/?name=Comic+Finance+User&background=BB6BD9&color=fff",
 };
 
 export const dashboardOverview = {

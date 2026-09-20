@@ -1,6 +1,6 @@
 <div align="center">
 
-# 💸 PennyComic
+# 💸 Comic Finance
 
 ### A personal finance wallet with a comic-book soul
 
@@ -47,7 +47,7 @@
 
 ## 🦸 About the project
 
-PennyComic started as a simple question: *why does every finance app look like a spreadsheet?*
+Comic Finance started as a simple question: *why does every finance app look like a spreadsheet?*
 
 It is a **personal finance wallet** built for one person to manage their own money. It is not a bank, not a SaaS product, and not trying to be one. But it is built as if it were going to be — with the kind of care a professional codebase deserves:
 
@@ -152,8 +152,8 @@ node --version
 
 ```bash
 # 1. Clone the repository
-git clone <your-repository-url> pennycomic
-cd pennycomic
+git clone <your-repository-url> comic-finance
+cd comic-finance
 
 # 2. Install dependencies
 npm install
@@ -201,7 +201,7 @@ npx tsc --noEmit && npm run lint && npm test
 ## 📁 Project structure
 
 ```
-pennycomic/
+comic-finance/
 ├── .data/                     # SQLite database (auto-created, git-ignored)
 ├── public/                    # Static assets
 ├── src/
@@ -361,7 +361,7 @@ Schema changes run automatically the first time the database opens, and they are
 
 ## 🎨 Design system
 
-PennyComic's look comes from a small set of rules applied consistently.
+Comic Finance's look comes from a small set of rules applied consistently.
 
 ### Principles
 - **Thick borders.** Every card, button and input has a heavy 2px outline.
@@ -432,7 +432,7 @@ The suite is organized around the risks that actually hurt a finance app:
 ## 🧩 Make it yours
 
 > [!TIP]
-> **PennyComic is meant to be customized, extended and improved.** It is a personal project with a clean foundation, and every part of it can be adapted to fit your needs better as it grows. Fork it, reshape it, break it and rebuild it. The structure is intentionally predictable, so changes stay easy.
+> **Comic Finance is meant to be customized, extended and improved.** It is a personal project with a clean foundation, and every part of it can be adapted to fit your needs better as it grows. Fork it, reshape it, break it and rebuild it. The structure is intentionally predictable, so changes stay easy.
 
 Here are some common ways to adapt it.
 
@@ -500,13 +500,13 @@ Being honest about what is not done yet is part of building something well. Thes
 | 6 | **Single-process database** | SQLite suits one server process, not a cluster | Fine for personal use; move to a networked database only if you scale out |
 
 > [!WARNING]
-> **Running locally or on your home network is the intended setup.** Do not expose PennyComic to the public internet until limitation #4 is addressed.
+> **Running locally or on your home network is the intended setup.** Do not expose Comic Finance to the public internet until limitation #4 is addressed.
 
 ---
 
 ## 🗺️ Roadmap
 
-Ideas for where PennyComic could go next. Every item is open for anyone who wants to pick it up.
+Ideas for where Comic Finance could go next. Every item is open for anyone who wants to pick it up.
 
 **Data integrity**
 - [ ] Store money as integer minor units
@@ -627,8 +627,8 @@ If you plan to share it publicly or accept contributions, consider adding one. T
 
 <div align="center">
 
-**Built with care, one penny at a time.** 💸
+**Built with care.** 💸
 
-*PennyComic is a living project — adapt it, improve it, and make it better for whatever comes next.*
+*Comic Finance is a living project — adapt it, improve it, and make it better for whatever comes next.*
 
 </div>

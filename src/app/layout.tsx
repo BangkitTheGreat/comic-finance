@@ -9,7 +9,7 @@ const publicSans = Public_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "PennyComic - Personal Finance",
+  title: "Comic Finance - Personal Finance",
   description: "A fun and clean comic-style personal finance dashboard.",
   manifest: "/manifest.json",
 };

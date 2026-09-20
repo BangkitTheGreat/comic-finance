@@ -30,7 +30,7 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
           <p className="mt-1 text-sm text-on-surface-variant [overflow-wrap:anywhere]"><bdi>{profile.email}</bdi></p>
         </div>
       </div>
-      <p className="mt-5 text-sm leading-relaxed text-on-surface-variant">Your name and initials appear throughout PennyComic.</p>
+      <p className="mt-5 text-sm leading-relaxed text-on-surface-variant">Your name and initials appear throughout Comic Finance.</p>
       {!editing && <button ref={editButton} type="button" className={`${styles.button} ${styles.primary} mt-5 w-full`} onClick={() => { clear(); setEditing(true); }}><span aria-hidden="true" className="material-symbols-outlined text-lg">edit</span>Edit profile</button>}
       <p role="status" className="mt-3 text-sm text-secondary">{saved && !editing ? "Profile updated." : ""}</p>
       {editing && <form className="mt-5" aria-busy={pending} onSubmit={event => { event.preventDefault(); submit(new FormData(event.currentTarget)); }}>

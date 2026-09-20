@@ -29,11 +29,11 @@ beforeEach(() => resetWorkspaceForTest());
 
 describe("profile mutation boundary", () => {
   it.each([
-    { name: " ", email: "penny@example.com" },
-    { name: "x".repeat(81), email: "penny@example.com" },
-    { name: "Two\nLines", email: "penny@example.com" },
-    { name: "Penny", email: "invalid@address" },
-    { name: new Blob(["Penny"]), email: "penny@example.com" },
+    { name: " ", email: "user@comicfinance.example" },
+    { name: "x".repeat(81), email: "user@comicfinance.example" },
+    { name: "Two\nLines", email: "user@comicfinance.example" },
+    { name: "Comic", email: "invalid@address" },
+    { name: new Blob(["Comic"]), email: "user@comicfinance.example" },
   ])("rejects invalid input without changing the profile: %j", async values => {
     const original = getProfile(WS);
     expect((await editProfile(form(values))).ok).toBe(false);
@@ -43,13 +43,13 @@ describe("profile mutation boundary", () => {
     const before = getProfile(WS);
     expect((await editProfile(form({ name: "  Agung Putra  ", email: "  agung@example.com " }))).ok).toBe(true);
     expect(getProfile(WS)).toEqual({ name: "Agung Putra", email: "agung@example.com" });
-    expect(before.name).toBe("Penny User");
+    expect(before.name).toBe("Comic Finance User");
     const copy = getProfile(WS);
     copy.name = "Outside mutation";
     expect(getProfile(WS).name).toBe("Agung Putra");
   });
   it("derives local initials for empty, Unicode and multiword names", () => {
-    expect(profileInitials(" ")).toBe("PU");
+    expect(profileInitials(" ")).toBe("CF");
     expect(profileInitials("Agung")).toBe("A");
     expect(profileInitials("  Agung Budi Putra ")).toBe("AP");
     expect(profileInitials("Émile 王")).toBe("É王");

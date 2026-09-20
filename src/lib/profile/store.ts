@@ -12,7 +12,7 @@ interface ProfileRow {
 
 export function getProfile(workspaceId: string): UserProfile {
   const row = getDb().prepare("SELECT name, email FROM profiles WHERE workspace_id = ?").get(workspaceId) as ProfileRow | undefined;
-  if (!row) return { name: "Penny User", email: "penny@example.com" };
+  if (!row) return { name: "Comic Finance User", email: "user@comicfinance.example" };
   // Rebuilt as a plain object literal, never returned as-is: node:sqlite hands
   // back rows with a null prototype, and React refuses to serialize those
   // across the Server -> Client Component boundary (Sidebar/MobileNav take

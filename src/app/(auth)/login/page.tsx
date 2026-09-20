@@ -6,15 +6,15 @@ export default function LoginPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="text-center">
-        <h1 className="font-headline-lg font-black text-ink">PennyComic</h1>
-        <p className="font-body-md text-on-surface-variant">Welcome back! Let&apos;s track some pennies.</p>
+        <h1 className="font-headline-lg font-black text-ink">Comic Finance</h1>
+        <p className="font-body-md text-on-surface-variant">Welcome back! Let&apos;s track some finances.</p>
       </div>
 
       <ComicCard>
         <form className="flex flex-col gap-4">
           <div>
             <label className="block font-label-md mb-2 text-ink">Email</label>
-            <input type="email" className="w-full bg-surface-container-low border-2 border-border-heavy rounded-lg p-3 font-body-md focus:outline-none focus:border-primary focus:shadow-[2px_2px_0px_0px_rgba(0,90,182,0.3)] transition-all" placeholder="penny@example.com" />
+            <input type="email" className="w-full bg-surface-container-low border-2 border-border-heavy rounded-lg p-3 font-body-md focus:outline-none focus:border-primary focus:shadow-[2px_2px_0px_0px_rgba(0,90,182,0.3)] transition-all" placeholder="user@comicfinance.example" />
           </div>
           <div>
             <label className="block font-label-md mb-2 text-ink">Password</label>

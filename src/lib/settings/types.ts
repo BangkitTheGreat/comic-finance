@@ -9,7 +9,7 @@ export const SETTING_GROUPS: {
   description: string;
   items: { key: SettingKey; label: string; description: string; icon: string; color: string }[];
 }[] = [
-  { group: "In-app reminders", description: "Choose what appears while you use PennyComic.", items: [
+  { group: "In-app reminders", description: "Choose what appears while you use Comic Finance.", items: [
     { key: "notifyBills", label: "Upcoming bills", description: "Show upcoming bills on your dashboard.", icon: "notifications", color: "bg-pop-blue" },
     { key: "notifyBudget", label: "Budget warnings", description: "Show a warning as spending approaches a category limit.", icon: "warning", color: "bg-warning" },
   ] },
