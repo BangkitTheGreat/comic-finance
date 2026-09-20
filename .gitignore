@@ -43,6 +43,9 @@ next-env.d.ts
 # local ide / assistant
 .claude
 .remember
+.kilo
+AGENTS.md
+CLAUDE.md
 
 # persistent app data (sqlite db + WAL/SHM files)
 /.data
